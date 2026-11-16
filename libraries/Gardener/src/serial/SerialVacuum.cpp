@@ -13,25 +13,6 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, const SystemControl& control) {
-  const SystemStatus status = control.status();
-  io.print("ok pressure_kpa=");
-  io.print(status.pressureKpa, 2u);
-
-  // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
-  // the one that holds the chamber released.
-  io.print(" target=");
-  io.print(status.targetKpa, 1u);
-
-  io.print(" state=");
-  io.print(runStateName(status.state));
-  io.print(" duty=");
-  io.print(status.dutyPercent, 1u);
-  io.print(" fault=");
-  io.print(status.fault[0] ? status.fault : "none");
-  io.print('\n');
-}
-
 // The one line the wire adds to a set: which outcome the control reported, and how the wire says
 // it. Every decision behind the answer — the bounds, the ambient target, the refusal — is the
 // control's.
@@ -111,6 +92,26 @@ void reset(Stream& io, const String& args, SystemControl& control) {
 
 }  // namespace
 
+// The status line both `vacuum get` and the heartbeat write, so the two cannot drift apart.
+void SerialLink::writeStatus(Stream& io) const {
+  const SystemStatus status = control_.status();
+  io.print("pressure_kpa=");
+  io.print(status.pressureKpa, 2u);
+
+  // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
+  // the one that holds the chamber released.
+  io.print(" target=");
+  io.print(status.targetKpa, 1u);
+
+  io.print(" state=");
+  io.print(runStateName(status.state));
+  io.print(" duty=");
+  io.print(status.dutyPercent, 1u);
+  io.print(" fault=");
+  io.print(status.fault[0] ? status.fault : "none");
+  io.print('\n');
+}
+
 // The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
 void SerialLink::executeVacuum(Stream& io) {
   String line = io.readStringUntil('\n');
@@ -137,7 +138,8 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    get(io, control_);
+    io.print("ok ");
+    writeStatus(io);
     return;
   }
   if (verb == "set") {

@@ -14,9 +14,9 @@ namespace {
 // The rig this build is wired to. The libraries take the pins, so a board variant is this block and
 // nothing else.
 constexpr gardener::MachinePins Board{
-    .sensorAdc = 7,
-    .pumpPwm = 6,
-    .ventValve = 5,
+    .sensorAdc = 5,
+    .pumpPwm = 8,
+    .ventValve = 9,
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain

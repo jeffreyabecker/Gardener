@@ -3,6 +3,13 @@
 #include "core/Logger.h"
 
 namespace gardener {
+namespace {
+
+// A heartbeat every five seconds: often enough that a controller sees the machine is alive and what
+// it is doing, rarely enough that it stays out of the way of a command's reply.
+constexpr uint32_t HeartbeatPeriodMs = 5000;
+
+}  // namespace
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control)
     : stream_(stream), port_(stream), present_(present), logger_(logger), control_(control) {}
@@ -17,8 +24,8 @@ void SerialLink::begin() {
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
 
 // --- replies ---------------------------------------------------------------
-// The link writes only its own errors and diagnostics. A grammar formats its reply through the
-// stream it is handed.
+// The link writes its own errors and diagnostics; a grammar formats its reply through the stream it
+// is handed. The heartbeat is the one line the link speaks with the machine's own words.
 
 void SerialLink::linkError(const char* code, const String& detail) {
   stream_.print("err ");
@@ -33,8 +40,6 @@ void SerialLink::linkError(const char* code, const String& detail) {
 // --- bytes -----------------------------------------------------------------
 
 void SerialLink::poll(uint32_t nowMs) {
-  (void)nowMs;
-
   // The link reads the domain token and nothing else. Once the token is followed by a space or a
   // tab, the stream belongs to the grammar, which parses the rest of the line (and any body).
   while (stream_.available() > 0) {
@@ -97,6 +102,16 @@ void SerialLink::poll(uint32_t nowMs) {
     logger_.warn("serial: controller detached");
   }
   attached_ = attached;
+  heartbeat(nowMs);
+}
+
+// Unsolicited, so it carries a word of its own: a controller reading `ok` and `err` replies does not
+// mistake a heartbeat for an answer.
+void SerialLink::heartbeat(uint32_t nowMs) {
+  if (nowMs - lastHeartbeatMs_ < HeartbeatPeriodMs) return;
+  lastHeartbeatMs_ = nowMs;
+  stream_.print("hb ");
+  writeStatus(stream_);
 }
 
 // The one list of what the link serves: the dispatcher and the token-only line both read it.
