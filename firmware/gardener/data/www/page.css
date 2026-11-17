@@ -19,3 +19,11 @@ button.secondary { background: #fff; color: #1a1a1a; border-color: #c9d2da; }
 #networks li { padding: 4px 0; border-bottom: 1px solid #eef1f4; cursor: pointer; }
 #networks li:hover { background: #f4f6f8; }
 .muted { color: #667; font-size: 13px; }
+
+nav { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid #dde3e8; }
+nav a, nav span { padding: 6px 12px; font-weight: 500; border: 1px solid transparent;
+                  border-radius: 8px 8px 0 0; }
+nav a { color: #2563eb; text-decoration: none; }
+nav a:hover { background: #eef2f7; }
+nav span[aria-current="page"] { background: #fff; border-color: #dde3e8; border-bottom-color: #fff;
+                                margin-bottom: -1px; }

@@ -9,6 +9,10 @@
 <body>
 <main>
   <h1>Gardener</h1>
+  <nav>
+    <span aria-current="page">Machine</span>
+    <a href="/wifi.html">WiFi</a>
+  </nav>
 
   <section>
     <h2>Machine</h2>
@@ -27,33 +31,9 @@
     </div>
     <p id="message"></p>
   </section>
-
-  <section>
-    <h2>WiFi</h2>
-    <div class="stat">
-      <div><span>Mode</span><b id="mode">-</b></div>
-      <div><span>Network</span><b id="network">-</b></div>
-      <div><span>Address</span><b id="address">-</b></div>
-    </div>
-    <div class="row">
-      <button class="secondary" onclick="scan()">Scan</button>
-      <input id="ssid" placeholder="network name" autocomplete="off">
-      <input id="pass" type="password" placeholder="password" autocomplete="current-password">
-    </div>
-    <ul id="networks"></ul>
-    <div class="row">
-      <label class="muted"><input id="keep" type="checkbox">
-        keep the setup network on while joined</label>
-    </div>
-    <div class="row">
-      <button onclick="saveWifi()">Save and join</button>
-      <button class="secondary" onclick="act('/api/wifi/forget')">Forget</button>
-    </div>
-    <p class="muted">Saving joins the selected network. If the setup network disappears, the board
-      is on the new network and the serial log prints its address.</p>
-  </section>
 </main>
 
-<script src="/page.js"></script>
+<script src="/app.js"></script>
+<script src="/machine.js"></script>
 </body>
 </html>

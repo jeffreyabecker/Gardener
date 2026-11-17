@@ -1,41 +1,8 @@
-const $ = (id) => document.getElementById(id);
-
-async function send(path, params) {
-  const body = new URLSearchParams(params || {}).toString();
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body
-  });
-  return new URLSearchParams(await response.text());
-}
-
-function show(result) {
-  if (result.get('ok') === '1') {
-    const state = result.get('state');
-    $('message').textContent = state ? 'ok: ' + state.toLowerCase() : 'ok';
-    return;
-  }
-  const detail = result.get('reason') || result.get('value') || '';
-  $('message').textContent = 'error: ' + (result.get('err') || 'unknown') +
-    (detail ? ' (' + detail + ')' : '');
-}
+// The network's page: where the radio stands, what it can see, and the choice the board stores.
 
 async function act(path, params) {
   show(await send(path, params));
-  refresh();
-}
-
-async function refresh() {
-  const status = new URLSearchParams(await (await fetch('/api/status')).text());
-  $('state').textContent = status.get('state') || '-';
-  const pressure = status.get('pressure_kpa');
-  $('pressure').textContent = pressure === null ? '-' : pressure + ' kPa';
-  const target = status.get('target');
-  $('target').textContent = target === null ? '-' : target + ' kPa';
-  const duty = status.get('duty');
-  $('duty').textContent = duty === null ? '-' : duty + ' %';
-  $('fault').textContent = status.get('fault') || 'none';
+  wifiState();
 }
 
 async function wifiState() {
@@ -78,7 +45,5 @@ async function saveWifi() {
   setTimeout(wifiState, 2000);
 }
 
-refresh();
 wifiState();
-setInterval(refresh, 1000);
 setInterval(wifiState, 5000);

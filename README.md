@@ -91,11 +91,13 @@ The page is a file tree on the board, not a string in the firmware: everything u
 [firmware/gardener/data/www](./firmware/gardener/data/www) becomes the LittleFS image that
 `--task data` builds, and a `GET` is the matching path inside it — `/` and `/dir/` serve that
 directory's `index.html`, `/page.css` serves the stylesheet beside it, and a URI with `..` in it is
-refused. A file added to the folder is a URL; splitting the page into files is what `index.html`,
-`page.css` and `page.js` there already do. A `GET` that matches nothing is the portal's landing
-while the setup access point is up and a 404 otherwise, and a missing tree answers
-`404 ok=0&err=no_page` — the serial link still works, which is how a board without an image is
-looked at.
+refused. A file added to the folder is a URL, and the folder already splits the page in two: `/` is
+the machine's readings and its three buttons, `/wifi.html` is the network — what the radio sees,
+what it joined, and the choice it stores — and a nav bar at the top of each says which page is
+which and links to the other. `page.css` and `app.js` are shared; `machine.js` and `wifi.js` are
+each page's own. A `GET` that matches nothing is the portal's landing while the setup access point
+is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page` — the serial link still
+works, which is how a board without an image is looked at.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
