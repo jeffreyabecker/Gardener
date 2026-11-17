@@ -15,11 +15,6 @@ GARDENER_KNOB_VALID(uint16_t, CommandLineMax, GARDENER_SERIAL_COMMAND_LINE_MAX, 
                         GARDENER_SERIAL_COMMAND_LINE_MAX <= 1024,
                     "a line the link can hold, in bytes");
 
-// The wire revision this link serves. The wire is still unsettled, so the number stays 1 and does
-// not move per revision; a controller must not treat it as a compatibility guarantee.
-GARDENER_KNOB_VALID(uint32_t, ProtocolVersion, GARDENER_SERIAL_PROTOCOL_VERSION, 1,
-                    GARDENER_SERIAL_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
-
 // The serial interface to the controller. It reads the first token of each line and hands the rest of
 // the line, body included, to that token's grammar — `vacuum`, which is the only domain the device
 // serves. A token nothing serves is answered as an unknown domain, and the link owns only its own
@@ -39,9 +34,9 @@ class SerialLink {
   void begin();
   void poll(uint32_t nowMs);
 
+ private:
   bool controllerAttached() const;
 
- private:
   // The port as a grammar sees it: the bytes the link reads, with a CR the LF follows taken off. The
   // port's terminator is LF alone, so "\r\n" ends a line the way "\n" does and no grammar has to
   // know which one the host wrote.

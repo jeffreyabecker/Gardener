@@ -1,4 +1,4 @@
-#include "hal/impl/SolenoidValve.h"
+#include "core/hal/SolenoidValve.h"
 
 #include <Arduino.h>
 #include <esp32-hal-gpio.h>
@@ -32,8 +32,6 @@ void SolenoidValve::close() {
   open_ = false;
   write(!energiseWhenOpen());
 }
-
-bool SolenoidValve::energised() const { return open_ ? energiseWhenOpen() : !energiseWhenOpen(); }
 
 void SolenoidValve::write(bool energise) { digitalWrite(pin_, energise ? HIGH : LOW); }
 

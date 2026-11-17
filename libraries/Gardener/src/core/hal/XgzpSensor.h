@@ -26,14 +26,6 @@ class AnalogSensor : public PressureSensor {
 
   float pressureKpa() const override;
 
-  // --- the reading itself -------------------------------------------------
-  // What the part is putting out and what that is measured from, in volts: the two numbers a check
-  // of the part is looking at.
-  float volts() const { return filteredVolts_; }
-  float ambientVolts() const { return ambientVolts_; }
-  // False while the ambient reference is still the mean of a window that has not closed.
-  bool settled() const { return settled_; }
-
  private:
   bool sample(float& outVolts);
   void applySample(float volts);

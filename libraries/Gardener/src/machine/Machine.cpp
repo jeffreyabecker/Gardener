@@ -1,5 +1,7 @@
 #include "machine/Machine.h"
 
+#include <Arduino.h>
+
 #include "core/Logger.h"
 #include "core/firmwareversion.h"
 

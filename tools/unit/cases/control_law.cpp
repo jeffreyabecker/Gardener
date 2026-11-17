@@ -17,7 +17,6 @@ namespace {
 using gardener::ControlDeadbandKpa;
 using gardener::ControlFloorKpa;
 using gardener::ControlMaxRunMs;
-using gardener::ControlMinTargetKpa;
 using gardener::ControlOvershootKpa;
 using gardener::ControlOvershootReadings;
 using gardener::ControlPeriodMs;
@@ -115,12 +114,6 @@ TEST_CASE("a start while running keeps the first deadline") {
   runFrom(rig, 40.0f, 20.0f);
   rig.system.start(10);
   CHECK_EQ(rig.system.holdSeconds(), ControlMaxRunMs / 1000);
-}
-
-TEST_CASE("a stored maximum is held to the machine's ceiling") {
-  CHECK_EQ(gardener::maxRunSeconds(0), ControlMaxRunMs / 1000);
-  CHECK_EQ(gardener::maxRunSeconds(600), static_cast<uint32_t>(600));
-  CHECK_EQ(gardener::maxRunSeconds(ControlMaxRunMs / 1000 + 1), ControlMaxRunMs / 1000);
 }
 
 TEST_CASE("a hold of zero asks for the ceiling") {
@@ -242,7 +235,6 @@ TEST_CASE("a release stops the pump before it opens the valve") {
 TEST_CASE("the reported floor and deadband are the loop's own numbers") {
   CHECK_EQ(ControlFloorKpa, 60.0f);
   CHECK_EQ(ControlDeadbandKpa, 0.2f);
-  CHECK_EQ(ControlMinTargetKpa, 5.0f);
   CHECK_EQ(VentFloorKpa, 1.0f);
   CHECK_EQ(VentMarginKpa, 2.0f);
   CHECK_EQ(ControlProgressKpa, 1.0f);

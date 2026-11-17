@@ -31,28 +31,16 @@ class FakePump : public Pump {
     note("pump.duty");
   }
   void stop() override {
-    stopped_ = true;
-    halted_ = false;
     duty_ = 0.0f;
     note("pump.stop");
   }
   void halt() override {
-    halted_ = true;
-    stopped_ = false;
     duty_ = 0.0f;
     note("pump.halt");
   }
   float dutyPercent() const override { return duty_; }
 
-  void clear() {
-    stopped_ = false;
-    halted_ = false;
-    duty_ = 0.0f;
-  }
-
   float duty() const { return duty_; }
-  bool stopped() const { return stopped_; }
-  bool halted() const { return halted_; }
 
  private:
   void note(const char* what) {
@@ -61,8 +49,6 @@ class FakePump : public Pump {
 
   std::vector<std::string>* events_;
   float duty_ = 0.0f;
-  bool stopped_ = false;
-  bool halted_ = false;
 };
 
 // The sensor: a depth a case sets, and flags for the two ways it goes quiet.
@@ -86,11 +72,6 @@ class FakeSensor : public PressureSensor {
     present_ = false;
     valid_ = false;
   }
-  // The part answers but has no filtered sample yet.
-  void warmUp() {
-    present_ = true;
-    valid_ = false;
-  }
 
  private:
   float kpa_ = 0.0f;
@@ -107,15 +88,12 @@ class FakeValve : public VentValve {
   void begin() override {}
   void open() override {
     vents_ = true;
-    energised_ = energiseWhenOpen_;
     note("valve.open");
   }
   void close() override {
     vents_ = false;
-    energised_ = !energiseWhenOpen_;
     note("valve.close");
   }
-  bool energised() const override { return energised_; }
   bool energiseWhenOpen() const override { return energiseWhenOpen_; }
 
   bool vents() const { return vents_; }
@@ -128,17 +106,13 @@ class FakeValve : public VentValve {
   bool energiseWhenOpen_;
   std::vector<std::string>* events_;
   bool vents_ = false;
-  bool energised_ = false;
 };
 
 // The one sink: every line a domain logs, in order, with the level it came in at.
 class RecordingLogger : public Logger {
  public:
-  String levels() const override { return levels_; }
-  void setLevels(const String& levels) override { levels_ = levels; }
   void info(const char* text) override { log('I', text); }
   void warn(const char* text) override { log('W', text); }
-  void error(const char* text) override { log('E', text); }
 
   // Whether any line so far contains `text`.
   bool saw(const char* text) const {
@@ -149,7 +123,6 @@ class RecordingLogger : public Logger {
   }
 
   const std::vector<std::string>& lines() const { return lines_; }
-  void clear() { lines_.clear(); }
 
  private:
   void log(char level, const char* text) {
@@ -160,7 +133,6 @@ class RecordingLogger : public Logger {
     lines_.push_back(line);
   }
 
-  String levels_ = "IWE";
   std::vector<std::string> lines_;
 };
 

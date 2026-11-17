@@ -8,7 +8,7 @@ namespace gardener {
 //
 // This is the interface the vacuum system holds, in the same shape as gfx::DisplayDevice: what the
 // loop needs a pump to do, with no pins and no PWM in it. What drives a pump on this rig — an LEDC
-// channel into a low side MOSFET — is in hal/impl/, along with the duty cap and the slew limit,
+// channel into a low side MOSFET — is in core/hal/, along with the duty cap and the slew limit,
 // because those are properties of the part rather than of the loop.
 class Pump {
  public:

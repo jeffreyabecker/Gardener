@@ -55,13 +55,13 @@ described next is a decision already made, not a precedent for the next abstract
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
 a part is an abstract class in `libraries/Gardener/src/core/` with its implementation in
-`libraries/Gardener/src/hal/impl/`, and the vacuum system takes it by reference even though the vacuum
+`libraries/Gardener/src/core/hal/`, and the vacuum system takes it by reference even though the vacuum
 system is its only caller. Don't fold a driver into the class that drives it: the register writes
 and the control law are the two things here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because a vendor
 header is allowed only where a part is named — `<esp32-hal-adc.h>` in
-`libraries/Gardener/src/hal/impl/XgzpSensor.cpp`, where the sensor is the part — and because the
+`libraries/Gardener/src/core/hal/XgzpSensor.cpp`, where the sensor is the part — and because the
 vacuum system reads the same whether the part behind it is a sensor or nothing at all. An interface
 with one implementation earns its place exactly when it is a foreign boundary like that; anywhere
 else it is a second implementation that does not exist yet.

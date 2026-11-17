@@ -17,8 +17,6 @@ class SolenoidValve : public VentValve {
   void open() override;
   void close() override;
 
-  bool energised() const override;
-
   // True when energising the coil opens the valve (normally closed), false when it closes it
   // (normally open). The one fact that separates the two parts this rig can be fitted with.
   bool energiseWhenOpen() const override { return energiseWhenOpen_; }

@@ -1,5 +1,7 @@
 #include "beats/MachineTick.h"
 
+#include <Arduino.h>
+
 #include "core/Logger.h"
 
 namespace gardener {
@@ -17,8 +19,6 @@ void MachineTick::tick(uint32_t nowMs) {
   vacuum_.service(nowMs);
   logRunChanges(nowMs);
 }
-
-void MachineTick::apply(const MachineCommand& command) { applyMachineCommand(vacuum_, command); }
 
 void MachineTick::logCollapsed(const MachineCommand& command, const char* reason) {
   String message = "queue: dropped ";
@@ -65,7 +65,7 @@ void MachineTick::drainCommands() {
       logCollapsed(batch[i], "for a later target");
       continue;
     }
-    apply(batch[i]);
+    applyMachineCommand(vacuum_, batch[i]);
   }
 }
 

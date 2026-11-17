@@ -20,17 +20,11 @@ class MachineTick {
  public:
   MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue);
 
-  // The beat's start. The machine is brought up by the composition before the task is spawned, so
-  // there is nothing to do here yet; it is here so every beat starts the same way.
-  void begin() {}
-
   // One beat: applies what is queued, then updates the sensor and the pump, services the machine
   // and writes the run log, in that order. The millisecond is the tick's only clock.
   void tick(uint32_t nowMs);
 
  private:
-  // One queued write, applied to the machine's own vacuum system.
-  void apply(const MachineCommand& command);
   // A command the machine never had to apply, named with why, so a burst that collapses leaves the
   // same evidence as one that ran.
   void logCollapsed(const MachineCommand& command, const char* reason);

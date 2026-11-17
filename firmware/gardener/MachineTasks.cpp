@@ -45,12 +45,8 @@ struct InterfaceState {
   SerialLink* link;
 };
 
-}  // namespace
-
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
-
-  state.tick.begin();
 
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
@@ -69,6 +65,8 @@ void interfaceTask(void* arg) {
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
+
+}  // namespace
 
 void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link) {
   static MachineTick tick{machine.vacuum(), machine.logger(), queue};

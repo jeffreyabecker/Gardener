@@ -27,7 +27,7 @@ A set is a target and a run in one command, and the run is granted the machine's
 (two hours). Zero is the ambient target, which releases the chamber, so `set 0` and `set -` vent.
 A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready` when
 the machine has no reading or a latched fault. The boot and run lines the firmware logs share the
-same stream, framed as `[I]`, `[W]` and `[E]`, so a controller reads the `ok` and `err` lines.
+same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
 unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the
@@ -50,8 +50,9 @@ The board options are pinned in
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 `--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the control
 law, the serial link and the three drivers that fill its parts — is the firmware rather than a
-sketchbook copy. Beside it a build finds [libraries/Runtime](./libraries/Runtime), the board it runs
-on: the parts builder and the two tasks that drive them.
+sketchbook copy. The board it runs on sits beside the sketch in
+[firmware/gardener](./firmware/gardener): the composition root, the parts builder and the two tasks
+that drive them.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
 define set, so the next one compiles only what changed since, header dependents included.

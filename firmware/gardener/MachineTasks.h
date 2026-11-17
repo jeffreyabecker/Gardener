@@ -12,9 +12,6 @@ class SerialLink;
 
 namespace gardener::runtime {
 
-void controlTask(void* arg);
-void interfaceTask(void* arg);
-
 // The composition spawns the control and interface tasks, pinned to their cores. The queue the
 // link posts into is built by the composition before either task runs and handed here, so the task
 // that drains it and the link that fills it hold the same object.

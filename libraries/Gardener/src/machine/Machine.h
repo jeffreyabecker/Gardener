@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include <stdint.h>
 
 #include "core/Knob.h"
@@ -14,14 +13,6 @@ class Logger;
 GARDENER_KNOB_VALID(uint32_t, ControlPeriodMs, GARDENER_CONTROL_PERIOD_MS, 50,
                     GARDENER_CONTROL_PERIOD_MS >= 10 && GARDENER_CONTROL_PERIOD_MS <= 1000,
                     "the control tick is the machine's beat, in milliseconds");
-// Shallowest non-zero target the loop will accept, in kPa below the ambient reference, and
-// inclusive: the wire publishes it as the `min` of `vacuum target`, so a pull of exactly this much
-// is accepted and anything gentler is refused rather than regulated. Zero is not below this bound:
-// it is the ambient target, which releases the chamber.
-GARDENER_KNOB_VALID(float, ControlMinTargetKpa, GARDENER_CONTROL_MIN_TARGET_KPA, 5.0f,
-                    GARDENER_CONTROL_MIN_TARGET_KPA > 0.0f &&
-                        GARDENER_CONTROL_MIN_TARGET_KPA <= 100.0f,
-                    "the sensor reads to 100 kPa below ambient");
 
 // --- The rig's own numbers ---------------------------------------------------
 // What a different pump, chamber or valve changes. These are facts about the build rather than
@@ -39,9 +30,8 @@ GARDENER_KNOB_VALID(float, PumpFlowLpm, GARDENER_PUMP_FLOW_LPM, 1.0f, GARDENER_P
 GARDENER_KNOB_VALID(float, ChamberVolumeL, GARDENER_CHAMBER_VOLUME_L, 0.05f,
                     GARDENER_CHAMBER_VOLUME_L > 0.0f, "ChamberVolumeL must be positive, in litres");
 GARDENER_KNOB_VALID(float, ControlFloorKpa, GARDENER_CONTROL_FLOOR_KPA, 60.0f,
-                    GARDENER_CONTROL_FLOOR_KPA >= GARDENER_CONTROL_MIN_TARGET_KPA &&
-                        GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
-                    "the floor must admit a target and stay inside the sensor's range");
+                    GARDENER_CONTROL_FLOOR_KPA > 0.0f && GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
+                    "the floor stays inside the sensor's range");
 GARDENER_KNOB_VALID(float, PumpDutyMaxPercent, GARDENER_PUMP_DUTY_MAX_PERCENT, 90.0f,
                     GARDENER_PUMP_DUTY_MAX_PERCENT > 0.0f &&
                         GARDENER_PUMP_DUTY_MAX_PERCENT <= 100.0f,
@@ -59,17 +49,6 @@ GARDENER_KNOB_VALID(bool, ValveNormallyOpen, GARDENER_VALVE_NORMALLY_OPEN, true,
 GARDENER_KNOB_VALID(uint32_t, ControlMaxRunMs, GARDENER_CONTROL_MAX_RUN_MS, 7200000,
                     GARDENER_CONTROL_MAX_RUN_MS >= 1000 && GARDENER_CONTROL_MAX_RUN_MS <= 86400000,
                     "a run is bounded by a day");
-
-// The hold a start is granted: the device's stored maximum, held to the machine's ceiling, or the
-// ceiling itself when the document names none. Every path that starts a run asks this, so the
-// document bounds a start from the wire and from a page alike, and a document edited past the
-// ceiling cannot promise a run the machine would cut short.
-inline uint32_t maxRunSeconds(int32_t storedSeconds) {
-  const uint32_t ceiling = ControlMaxRunMs / 1000;
-  if (storedSeconds <= 0) return ceiling;
-  const uint32_t stored = static_cast<uint32_t>(storedSeconds);
-  return stored < ceiling ? stored : ceiling;
-}
 
 // --- PID configuration from the pump and the chamber ------------------------
 // The loop's shape, rig-independent: the proportional correction time, the derivative's damping
@@ -189,9 +168,7 @@ class Machine {
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }
-  const VacuumSystem& vacuum() const { return vacuum_; }
   Logger& logger() { return logger_; }
-  uint32_t uptimeMs() const { return millis(); }
 
  private:
   Logger& logger_;
