@@ -1,0 +1,452 @@
+#include "WebLink.h"
+
+#include <Preferences.h>
+#include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <lwip/sockets.h>
+#include <stdint.h>
+
+#include "Form.h"
+#include "UiPage.h"
+#include "core/Knob.h"
+#include "core/Logger.h"
+#include "core/RunState.h"
+#include "machine/Machine.h"
+#include "machine/SystemControl.h"
+
+namespace gardener::runtime {
+namespace {
+
+GARDENER_KNOB_VALID(const char*, WifiApPrefix, GARDENER_WIFI_AP_PREFIX, "Gardener", true,
+                    "the setup network's name");
+GARDENER_KNOB_VALID(const char*, WifiApPassword, GARDENER_WIFI_AP_PASSWORD, "", true,
+                    "the setup network's password, empty for an open network");
+GARDENER_KNOB_VALID(uint32_t, WifiConnectTimeoutMs, GARDENER_WIFI_CONNECT_TIMEOUT_MS, 15000,
+                    GARDENER_WIFI_CONNECT_TIMEOUT_MS > 0,
+                    "how long a join gets before the portal comes up, in milliseconds");
+GARDENER_KNOB_VALID(uint32_t, WifiRetryMs, GARDENER_WIFI_RETRY_MS, 5000, GARDENER_WIFI_RETRY_MS > 0,
+                    "the wait between join retries, in milliseconds");
+GARDENER_KNOB_VALID(uint32_t, WifiTaskStackWords, GARDENER_WIFI_TASK_STACK_WORDS, 4096,
+                    GARDENER_WIFI_TASK_STACK_WORDS >= 2048, "the wifi task's stack, in words");
+GARDENER_KNOB_VALID(uint16_t, HttpPort, GARDENER_HTTP_PORT, 80, GARDENER_HTTP_PORT > 0,
+                    "the port the page and the API are served on");
+GARDENER_KNOB_VALID(uint32_t, HttpStackBytes, GARDENER_HTTP_STACK_BYTES, 8192,
+                    GARDENER_HTTP_STACK_BYTES >= 4096, "the httpd task's stack, in bytes");
+
+constexpr UBaseType_t WifiTaskPriority = 1;
+constexpr BaseType_t WifiTaskCore = 0;
+constexpr uint32_t TickMs = 20;
+constexpr const char* NvsNamespace = "wifi";
+constexpr uint8_t MaxRoutes = 12;
+constexpr uint32_t MaxFormBytes = 256;
+constexpr const char* FormType = "application/x-www-form-urlencoded";
+constexpr int MaxScannedNetworks = 16;
+
+void wifiTask(void* arg) {
+  WebLink& link = *static_cast<WebLink*>(arg);
+  for (;;) {
+    link.tick(millis());
+    vTaskDelay(pdMS_TO_TICKS(TickMs));
+  }
+}
+
+}  // namespace
+
+WebLink::WebLink(SystemControl& control, Logger& logger) : control_(control), logger_(logger) {}
+
+void WebLink::begin() {
+  Preferences prefs;
+  prefs.begin(NvsNamespace, true);
+  ssid_ = prefs.getString("ssid", "");
+  pass_ = prefs.getString("pass", "");
+  keepPortal_ = prefs.getBool("keep_ap", false);
+  prefs.end();
+
+  // The suffix tells two boards on the same bench apart in a WiFi list.
+  String suffix((uint16_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
+  suffix.toUpperCase();
+  while (suffix.length() < 4)
+    suffix = "0" + suffix;
+  portalSsid_ = String(WifiApPrefix) + "-" + suffix;
+
+  // The credentials are this link's, not the core's: persistent(false) stops WiFi writing a second
+  // copy into NVS that could then disagree with the page, and the retries below own the schedule.
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(false);
+
+  if (ssid_.isEmpty()) {
+    startPortal();
+  } else {
+    startJoin();
+  }
+  xTaskCreatePinnedToCore(wifiTask, "wifi", WifiTaskStackWords, this, WifiTaskPriority, nullptr,
+                          WifiTaskCore);
+
+  // The server starts on whichever interface the radio has: the portal when there is no network,
+  // the client address once there is one.
+  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+  config.server_port = HttpPort;
+  config.max_uri_handlers = MaxRoutes;
+  config.stack_size = HttpStackBytes;
+  config.lru_purge_enable = true;
+  config.uri_match_fn = httpd_uri_match_wildcard;
+  if (httpd_start(&server_, &config) != ESP_OK) {
+    logger_.warn("http: server did not start");
+    return;
+  }
+
+  route("/", HTTP_GET, onPage);
+  route("/api/status", HTTP_GET, onStatus);
+  route("/api/set", HTTP_POST, onSet);
+  route("/api/vent", HTTP_POST, onVent);
+  route("/api/reset", HTTP_POST, onReset);
+  route("/api/wifi", HTTP_GET, onWifi);
+  route("/api/wifi", HTTP_POST, onWifiSave);
+  route("/api/wifi/scan", HTTP_GET, onScan);
+  route("/api/wifi/forget", HTTP_POST, onWifiForget);
+  // Last, so it can only take what no route above did.
+  route("/*", HTTP_GET, onCatchAll);
+
+  String line = "http: server on port ";
+  line += String(HttpPort);
+  logger_.info(line.c_str());
+}
+
+void WebLink::tick(uint32_t nowMs) {
+  if (portalUp_) dns_.processNextRequest();
+  if (ssid_.isEmpty()) return;
+
+  if (WiFi.status() == WL_CONNECTED) {
+    joining_ = false;
+    portalMandatory_ = false;
+    if (!joinedReported_) {
+      joinedReported_ = true;
+      String line = "wifi: joined " + ssid_ + " at " + WiFi.localIP().toString();
+      logger_.info(line.c_str());
+    }
+    if (!keepPortal_ && portalUp_) stopPortal();
+    return;
+  }
+
+  if (joinedReported_) {
+    joinedReported_ = false;
+    joining_ = true;
+    joinStartMs_ = nowMs;
+    lastRetryMs_ = nowMs;
+    String line = "wifi: lost " + ssid_;
+    logger_.warn(line.c_str());
+    return;
+  }
+
+  if (!joining_) {
+    joining_ = true;
+    joinStartMs_ = nowMs;
+    lastRetryMs_ = nowMs;
+  }
+  if (!portalMandatory_ && nowMs - joinStartMs_ >= WifiConnectTimeoutMs) {
+    portalMandatory_ = true;
+    startPortal();
+    logger_.warn("wifi: join failed, the portal is up");
+  }
+  if (nowMs - lastRetryMs_ >= WifiRetryMs) {
+    lastRetryMs_ = nowMs;
+    WiFi.reconnect();
+  }
+}
+
+// --- the radio -------------------------------------------------------------
+
+void WebLink::startJoin() {
+  joinedReported_ = false;
+  portalMandatory_ = false;
+  joining_ = true;
+  joinStartMs_ = millis();
+  lastRetryMs_ = joinStartMs_;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid_.c_str(), pass_.c_str());
+  String line = "wifi: joining " + ssid_;
+  logger_.info(line.c_str());
+}
+
+void WebLink::join(const String& ssid, const String& pass, bool keepPortal) {
+  ssid_ = ssid;
+  pass_ = pass;
+  keepPortal_ = keepPortal;
+  save();
+
+  joinedReported_ = false;
+  portalMandatory_ = false;
+  joining_ = true;
+  joinStartMs_ = millis();
+  lastRetryMs_ = joinStartMs_;
+
+  WiFi.mode(portalUp_ ? WIFI_AP_STA : WIFI_STA);
+  WiFi.begin(ssid_.c_str(), pass_.c_str());
+  String line = "wifi: joining " + ssid_;
+  logger_.info(line.c_str());
+}
+
+void WebLink::forget() {
+  ssid_ = "";
+  pass_ = "";
+  keepPortal_ = false;
+  save();
+
+  joinedReported_ = false;
+  joining_ = false;
+  portalMandatory_ = true;
+  WiFi.disconnect(true);
+  if (portalUp_) {
+    // The portal outlives the forgotten network; only its client side goes.
+    WiFi.mode(WIFI_AP);
+  } else {
+    startPortal();
+  }
+  logger_.info("wifi: network forgotten");
+}
+
+void WebLink::startPortal() {
+  if (portalUp_) return;
+
+  WiFi.mode(ssid_.isEmpty() ? WIFI_AP : WIFI_AP_STA);
+  WiFi.softAP(portalSsid_.c_str(), WifiApPassword);
+  dns_.start(53, "*", WiFi.softAPIP());
+  portalUp_ = true;
+
+  String line = "wifi: portal " + portalSsid_ + " at " + WiFi.softAPIP().toString();
+  logger_.info(line.c_str());
+}
+
+void WebLink::stopPortal() {
+  dns_.stop();
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  portalUp_ = false;
+  logger_.info("wifi: portal closed");
+}
+
+void WebLink::save() const {
+  Preferences prefs;
+  prefs.begin(NvsNamespace, false);
+  prefs.putString("ssid", ssid_);
+  prefs.putString("pass", pass_);
+  prefs.putBool("keep_ap", keepPortal_);
+  prefs.end();
+}
+
+String WebLink::address() const {
+  if (WiFi.status() == WL_CONNECTED) return WiFi.localIP().toString();
+  return portalUp_ ? WiFi.softAPIP().toString() : String("-");
+}
+
+const char* WebLink::modeName() const {
+  if (portalUp_ && WiFi.status() == WL_CONNECTED) return "ap+sta";
+  if (portalUp_) return "ap";
+  return "sta";
+}
+
+int WebLink::scan(WifiNetwork* networks, int capacity) {
+  const int found = WiFi.scanNetworks();
+  int stored = 0;
+  for (int i = 0; i < found && stored < capacity; i++) {
+    networks[stored].ssid = WiFi.SSID(i);
+    networks[stored].rssi = WiFi.RSSI(i);
+    stored++;
+  }
+  WiFi.scanDelete();
+  return stored;
+}
+
+// --- the server ------------------------------------------------------------
+
+void WebLink::route(const char* uri, http_method method, esp_err_t (*handler)(httpd_req_t*)) {
+  httpd_uri_t definition = {};
+  definition.uri = uri;
+  definition.method = method;
+  definition.handler = handler;
+  definition.user_ctx = this;
+  httpd_register_uri_handler(server_, &definition);
+}
+
+WebLink* WebLink::from(httpd_req_t* request) { return static_cast<WebLink*>(request->user_ctx); }
+
+esp_err_t WebLink::reply(httpd_req_t* request, const char* code, const char* type,
+                         const String& body) {
+  httpd_resp_set_status(request, code);
+  httpd_resp_set_type(request, type);
+  return httpd_resp_send(request, body.c_str(), body.length());
+}
+
+esp_err_t WebLink::onPage(httpd_req_t* request) {
+  return reply(request, "200 OK", "text/html", UiPage);
+}
+
+esp_err_t WebLink::onStatus(httpd_req_t* request) {
+  const SystemStatus now = from(request)->control_.status();
+
+  String body = "ok=1&pressure_kpa=";
+  body += String(now.pressureKpa, 2u);
+  body += "&target=";
+  body += String(now.targetKpa, 1u);
+  body += "&state=";
+  body += runStateName(now.state);
+  body += "&duty=";
+  body += String(now.dutyPercent, 1u);
+  body += "&fault=";
+  body += (now.fault[0] ? now.fault : "none");
+  return reply(request, "200 OK", FormType, body);
+}
+
+esp_err_t WebLink::onSet(httpd_req_t* request) {
+  WebLink* self = from(request);
+  const String token = formField(bodyOf(request), "target");
+  if (token.isEmpty()) {
+    return reply(request, "400 Bad Request", FormType, "ok=0&err=missing_target");
+  }
+
+  // `-` stays as the shorthand for the ambient target, which is what 0 means as well.
+  float targetKpa = 0.0f;
+  if (token != "-") targetKpa = token.toFloat();
+
+  switch (self->control_.set(targetKpa)) {
+    case ServeResult::Ok: {
+      String body = "ok=1&target=";
+      body += String(targetKpa, 1u);
+      body += "&state=PULL";
+      return reply(request, "200 OK", FormType, body);
+    }
+    case ServeResult::Released:
+      return reply(request, "200 OK", FormType, "ok=1&target=0.0&state=VENT");
+    case ServeResult::BelowRange: {
+      String body = "ok=0&err=out_of_range&field=target&value=";
+      body += formEncoded(token);
+      body += "&min=0.0";
+      return reply(request, "400 Bad Request", FormType, body);
+    }
+    case ServeResult::AboveRange: {
+      String body = "ok=0&err=out_of_range&field=target&value=";
+      body += formEncoded(token);
+      body += "&max=";
+      body += String(ControlFloorKpa, 1u);
+      return reply(request, "400 Bad Request", FormType, body);
+    }
+    case ServeResult::NotReady: {
+      String body = "ok=0&err=not_ready&reason=";
+      body += self->control_.refusal();
+      return reply(request, "409 Conflict", FormType, body);
+    }
+  }
+
+  return reply(request, "400 Bad Request", FormType, "ok=0&err=unknown");
+}
+
+esp_err_t WebLink::onVent(httpd_req_t* request) {
+  from(request)->control_.vent();
+  return reply(request, "200 OK", FormType, "ok=1&state=VENT");
+}
+
+esp_err_t WebLink::onReset(httpd_req_t* request) {
+  from(request)->control_.reset();
+  return reply(request, "200 OK", FormType, "ok=1&state=IDLE");
+}
+
+esp_err_t WebLink::onWifi(httpd_req_t* request) {
+  const WebLink* self = from(request);
+
+  String body = "ok=1&ssid=";
+  body += formEncoded(self->ssid_);
+  body += "&mode=";
+  body += self->modeName();
+  body += "&ip=";
+  body += self->address();
+  body += "&keep_ap=";
+  body += self->keepPortal_ ? "1" : "0";
+  return reply(request, "200 OK", FormType, body);
+}
+
+esp_err_t WebLink::onScan(httpd_req_t* request) {
+  WifiNetwork networks[MaxScannedNetworks];
+  const int count = from(request)->scan(networks, MaxScannedNetworks);
+
+  String body = "ok=1&count=";
+  body += String(count);
+  for (int i = 0; i < count; i++) {
+    body += "&ssid";
+    body += String(i);
+    body += "=";
+    body += formEncoded(networks[i].ssid);
+    body += "&rssi";
+    body += String(i);
+    body += "=";
+    body += String(networks[i].rssi);
+  }
+  return reply(request, "200 OK", FormType, body);
+}
+
+esp_err_t WebLink::onWifiSave(httpd_req_t* request) {
+  const String body = bodyOf(request);
+  const String ssid = formField(body, "ssid");
+  const String pass = formField(body, "pass");
+  const bool keepPortal = formField(body, "keep_ap") == "1";
+
+  if (ssid.isEmpty()) {
+    return reply(request, "400 Bad Request", FormType, "ok=0&err=missing_ssid");
+  }
+
+  from(request)->join(ssid, pass, keepPortal);
+  return reply(request, "200 OK", FormType, "ok=1");
+}
+
+esp_err_t WebLink::onWifiForget(httpd_req_t* request) {
+  from(request)->forget();
+  return reply(request, "200 OK", FormType, "ok=1");
+}
+
+// The captive portal's landing: a path nothing serves, asked from the access point's own subnet,
+// sends the client to the page. The OS probes ask for their own URLs, so this is what opens the
+// portal sheet.
+esp_err_t WebLink::onCatchAll(httpd_req_t* request) {
+  WebLink* self = from(request);
+  if (self->portalUp_ && onPortal(request)) {
+    httpd_resp_set_status(request, "302 Found");
+    httpd_resp_set_hdr(request, "Location", "/");
+    return httpd_resp_send(request, nullptr, 0);
+  }
+  return reply(request, "404 Not Found", "text/plain", "not found\n");
+}
+
+bool WebLink::onPortal(httpd_req_t* request) {
+  struct sockaddr_in peer;
+  socklen_t length = sizeof(peer);
+  const int socket = httpd_req_to_sockfd(request);
+  if (socket < 0 || getpeername(socket, (struct sockaddr*)&peer, &length) != 0) return false;
+
+  // lwIP holds the peer in network order, and IPAddress's uint32 is the same byte order on this
+  // part, so the two compare directly over the /24 the access point hands out.
+  const uint32_t client = peer.sin_addr.s_addr;
+  const uint32_t accessPoint = static_cast<uint32_t>(WiFi.softAPIP());
+  return (client & 0x00FFFFFFu) == (accessPoint & 0x00FFFFFFu);
+}
+
+// --- the request body ------------------------------------------------------
+
+String WebLink::bodyOf(httpd_req_t* request) {
+  if (request->content_len == 0 || request->content_len > MaxFormBytes) return String();
+
+  char buffer[MaxFormBytes + 1];
+  size_t total = 0;
+  while (total < request->content_len) {
+    const int read = httpd_req_recv(request, buffer + total, request->content_len - total);
+    if (read <= 0) {
+      if (read == HTTPD_SOCK_ERR_TIMEOUT) continue;
+      return String();
+    }
+    total += read;
+  }
+  buffer[total] = '\0';
+  return String(buffer);
+}
+
+}  // namespace gardener::runtime

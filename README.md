@@ -1,16 +1,16 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
-then vents it — driven over one serial line.
+then vents it — driven over a serial line and a web page.
 
-The serial line is the only way in. A controller sets a depth and the machine pulls to it; a vent
-releases the chamber; a reset clears a fault. What the device owns is what has to happen when
-nobody is watching: holding the target, and venting the chamber through one path on stop, abort or
-fault. Pressures are kPa below ambient, on the wire and in the firmware.
+The serial line and the WiFi page are the ways in. A controller sets a depth and the machine pulls
+to it; a vent releases the chamber; a reset clears a fault. What the device owns is what has to
+happen when nobody is watching: holding the target, and venting the chamber through one path on
+stop, abort or fault. Pressures are kPa below ambient, on both wires and in the firmware.
 
 The device is the machine — pump, sensor and vent valve. One sketch,
 [firmware/gardener](./firmware/gardener), composes the libraries for it: what it names is what the
-device has, over the serial link it builds.
+device has, over the serial link and the web link it builds.
 
 ## Wire
 
@@ -34,6 +34,35 @@ unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code
 `get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
 without polling. Its own word keeps it clear of the replies a controller is waiting for.
 
+## Web
+
+The sketch joins a WiFi network, or runs its own setup access point when it has none to join, and
+serves a page at `/` over the same four verbs:
+
+| call | result |
+| --- | --- |
+| `GET /api/status` | `ok=1&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
+| `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
+| `POST /api/vent` | `ok=1&state=VENT` |
+| `POST /api/reset` | `ok=1&state=IDLE` |
+| `GET /api/wifi` | `ok=1&ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
+| `GET /api/wifi/scan` | `ok=1&count=<n>&ssid0=<name>&rssi0=<dBm>…` |
+| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `ok=1` |
+| `POST /api/wifi/forget` | `ok=1` |
+
+Requests and results are both `application/x-www-form-urlencoded`; there is no JSON anywhere. A
+refusal is `ok=0&err=<code>` with the serial wire's codes (`out_of_range`, `not_ready`) and a
+`reason`, `value`, `min` or `max` beside it. The HTTP status is 200 for a call the machine took,
+400 for a refused argument and 409 for `not_ready`.
+
+On first boot there is no stored network, so the board starts an open access point named
+`Gardener-<suffix>` and a captive portal; joining it opens the page. Scan, pick a network, enter its
+password and save. The board joins it, and unless **keep the setup network on** is ticked the access
+point closes once the join succeeds. **Forget** clears the stored network and brings the portal
+back. The serial log prints the portal name, the join attempts and the address the board ends up
+on. The page and the API are unauthenticated on whatever network the board joins, the same trust
+the serial line carries.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
@@ -51,8 +80,9 @@ without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 `--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the control
 law, the serial link and the three drivers that fill its parts — is the firmware rather than a
 sketchbook copy. The board it runs on sits beside the sketch in
-[firmware/gardener](./firmware/gardener): the composition root, the parts builder and the two tasks
-that drive them.
+[firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link and
+the tasks that drive them. The web link uses the ESP-IDF HTTP server, `DNSServer` and `Preferences`
+from the core, so there is no extra library to install.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
 define set, so the next one compiles only what changed since, header dependents included.
