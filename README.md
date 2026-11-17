@@ -73,19 +73,29 @@ refusal is `ok=0&err=<code>` with the serial wire's codes (`out_of_range`, `not_
 `reason`, `value`, `min` or `max` beside it. The HTTP status is 200 for a call the machine took,
 400 for a refused argument and 409 for `not_ready`.
 
-On first boot there is no stored network, so the board starts an open access point named
-`Gardener-<suffix>` and a captive portal; joining it opens the page. Scan, pick a network, enter its
-password and save. The board joins it, and unless **keep the setup network on** is ticked the access
-point closes once the join succeeds. **Forget** clears the stored network and brings the portal
-back. The serial log prints the portal name, the join attempts and the address the board ends up
-on. The page and the API are unauthenticated on whatever network the board joins, the same trust
-the serial line carries.
+On first boot there is no stored network, so the board starts an access point and a captive portal;
+joining it opens the page. Scan, pick a network, enter its password and save. The board joins it,
+and unless **keep the setup network on** is ticked the access point closes once the join succeeds.
+**Forget** clears the stored network and brings the portal back. The serial log prints the portal
+name, the join attempts and the address the board ends up on. The page and the API are
+unauthenticated on whatever network the board joins, the same trust the serial line carries.
+
+The setup network is the board, not a network it joins, and its name and key come out of the same
+config file: `ap_ssid` and `ap_pass` in `/wifi.conf`, which the image carries from
+`firmware/gardener/data/wifi.conf`. With no file, the board names itself `Gardener-<suffix>` — the
+prefix knob and the tail of its MAC, so two boards on a bench still differ — and the password knob
+decides whether it is open. A name is used verbatim up to 32 characters, and a password is 8 to 63
+characters or nothing: anything else is logged at boot and the portal comes up open, rather than
+with a key nobody can type. Start from
+[wifi.conf.example](./firmware/gardener/wifi.conf.example), which documents every field; the real
+file is not committed, because a password does not belong in the tree.
 
 The board answers mDNS on whichever interface is up, under the setup network's name in lower case:
-`http://gardener-<suffix>.local/` is the page, and the API is advertised as `_gardener._tcp` on the
-same port with an `api=/api` TXT record, beside `_http._tcp` for the page. A client that joined the
-access point can use the name as well as the address, so the page is reachable before any address
-is known.
+`http://gardener-<suffix>.local/` is the page when the board named itself, and a rig whose
+`ap_ssid` is its own answers as that name lowered, so `Bench-3` is `bench-3.local`. The API is
+advertised as `_gardener._tcp` on the same port with an `api=/api` TXT record, beside `_http._tcp`
+for the page. A client that joined the access point can use the name as well as the address, so the
+page is reachable before any address is known.
 
 The page is a file tree on the board, not a string in the firmware: everything under
 [firmware/gardener/data/www](./firmware/gardener/data/www) becomes the LittleFS image that
@@ -119,7 +129,10 @@ python scripts/arduino.py --task monitor --port COM5
 its own. The image is built with the core's `mklittlefs` and written with its `esptool` at the
 offset the board's own partition table gives the `spiffs` partition, so a different scheme needs no
 edit here. The write is skipped while `data/` is unchanged, since the partition also holds the
-stored network; a page edit rewrites it and the board comes back as its access point.
+stored network; a page edit rewrites it and the board comes back as its access point. A board that
+should be provisioned with its own setup network name and password needs its `data/wifi.conf` in
+place before this runs — it is not committed, and `wifi.conf.example` beside the sketch is the
+template.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,

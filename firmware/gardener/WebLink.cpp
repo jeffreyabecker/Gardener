@@ -45,6 +45,12 @@ constexpr uint32_t MaxFormBytes = 256;
 constexpr const char* FormType = "application/x-www-form-urlencoded";
 constexpr int MaxScannedNetworks = 16;
 
+// What an access point's name and key may be: 32 bytes of SSID, and WPA2's 8 to 63 characters — or
+// nothing at all, which is an open network.
+constexpr unsigned int MaxSetupNameChars = 32;
+constexpr unsigned int MinSetupPassChars = 8;
+constexpr unsigned int MaxSetupPassChars = 63;
+
 void wifiTask(void* arg) {
   WebLink& link = *static_cast<WebLink*>(arg);
   for (;;) {
@@ -81,12 +87,26 @@ void WebLink::begin() {
   }
   load();
 
-  // The suffix tells two boards on the same bench apart in a WiFi list.
+  // The suffix tells two boards on the same bench apart in a WiFi list, and it is what the setup
+  // network is called until the board's file names it.
   String suffix((uint16_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
   suffix.toUpperCase();
   while (suffix.length() < 4)
     suffix = "0" + suffix;
-  portalSsid_ = String(WifiApPrefix) + "-" + suffix;
+
+  // What the radio will take, checked here rather than at softAP: a name the radio truncates is one
+  // nobody finds in a list, and a key outside WPA2's range makes startPortal fail silently.
+  if (setupName_.length() > MaxSetupNameChars) {
+    logger_.warn("wifi: the setup name is longer than 32 characters, using the board's own");
+    setupName_ = "";
+  }
+  if (!setupPass_.isEmpty() &&
+      (setupPass_.length() < MinSetupPassChars || setupPass_.length() > MaxSetupPassChars)) {
+    logger_.warn("wifi: the setup password is not 8 to 63 characters, the portal comes up open");
+    setupPass_ = "";
+  }
+  portalSsid_ = setupName_.isEmpty() ? String(WifiApPrefix) + "-" + suffix : setupName_;
+  portalPass_ = setupPass_.isEmpty() ? String(WifiApPassword) : setupPass_;
 
   // The credentials are this link's, not the core's: persistent(false) stops WiFi writing a second
   // copy into NVS that could then disagree with the page, and the retries below own the schedule.
@@ -284,11 +304,12 @@ void WebLink::startPortal() {
   if (portalUp_) return;
 
   WiFi.mode(ssid_.isEmpty() ? WIFI_AP : WIFI_AP_STA);
-  WiFi.softAP(portalSsid_.c_str(), WifiApPassword);
+  WiFi.softAP(portalSsid_.c_str(), portalPass_.c_str());
   dns_.start(53, "*", WiFi.softAPIP());
   portalUp_ = true;
 
   String line = "wifi: portal " + portalSsid_ + " at " + WiFi.softAPIP().toString();
+  if (!portalPass_.isEmpty()) line += " keyed";
   logger_.info(line.c_str());
 }
 
@@ -307,6 +328,12 @@ void WebLink::save() const {
   line += formEncoded(pass_);
   line += "&keep_ap=";
   line += keepPortal_ ? "1" : "0";
+  // The setup network's own two fields go back exactly as the file gave them, empty when it did not:
+  // a save stores a choice, and never turns the board's default name into one.
+  line += "&ap_ssid=";
+  line += formEncoded(setupName_);
+  line += "&ap_pass=";
+  line += formEncoded(setupPass_);
 
   File file = LittleFS.open(ConfigPath, "w");
   if (!file) {
@@ -326,6 +353,8 @@ void WebLink::load() {
   ssid_ = formField(line, "ssid");
   pass_ = formField(line, "pass");
   keepPortal_ = formField(line, "keep_ap") == "1";
+  setupName_ = formField(line, "ap_ssid");
+  setupPass_ = formField(line, "ap_pass");
 }
 
 String WebLink::address() const {

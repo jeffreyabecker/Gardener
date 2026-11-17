@@ -98,7 +98,12 @@ class WebLink : public WifiControl {
   bool joinedReported_ = false;
   uint32_t joinStartMs_ = 0;
   uint32_t lastRetryMs_ = 0;
+  // The setup network's configured pair, kept apart from the effective one so a save writes a choice
+  // back and never a default: empty here means the board derives its own name and the knob decides.
+  String setupName_;
+  String setupPass_;
   String portalSsid_;
+  String portalPass_;
   DNSServer dns_;
   bool mounted_ = false;
 

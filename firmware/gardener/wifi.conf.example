@@ -1,0 +1,18 @@
+# The board's network configuration: one line of key=value pairs, in the form the page writes.
+#
+# Copy this beside it as data/wifi.conf -- which is not committed, because a password does not
+# belong in the tree -- and write the image with `python scripts/arduino.py --task data`. The image
+# carries that file as /wifi.conf, which is what the board reads at boot.
+#
+# ssid, pass and keep_ap are the network the board joins. The page rewrites them when it is given a
+# network, and keeps the two fields below exactly as they are; with no file at all, the board starts
+# its own setup network instead.
+#
+# ap_ssid and ap_pass are the setup network the board *is* -- the access point it starts when it has
+# no network to join. Empty means the board's own: `Gardener-` and the tail of its MAC for the name,
+# and the password knob for the key, so two boards on a bench still differ. A name is used verbatim
+# up to 32 characters. A password is 8 to 63 characters or nothing; anything else is logged and the
+# portal comes up open rather than with a key nobody can type.
+#
+# ap_ssid=Bench-3
+# ap_pass=changeme123
