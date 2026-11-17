@@ -1,5 +1,6 @@
 #include "WebLink.h"
 
+#include <ESPmDNS.h>
 #include <Preferences.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
@@ -110,6 +111,34 @@ void WebLink::begin() {
 
   String line = "http: server on port ";
   line += String(HttpPort);
+  logger_.info(line.c_str());
+
+  startMdns();
+}
+
+void WebLink::startMdns() {
+  // A host label is lower case, so it is the setup network's own name lowered: one word for the
+  // board whether the client reached it through the access point or the network it joined.
+  String host = portalSsid_;
+  host.toLowerCase();
+  // A label's alphabet is narrower than an SSID's, so the prefix's other characters become hyphens
+  // rather than a host name the responder refuses.
+  for (size_t i = 0; i < host.length(); i++) {
+    const char c = host[i];
+    if ((c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-') host[i] = '-';
+  }
+  if (!MDNS.begin(host.c_str())) {
+    logger_.warn("mdns: responder did not start");
+    return;
+  }
+  // The page has a name a browser and a service browser each know; the API gets one of its own so
+  // a client that finds it knows where the calls start without reading the page.
+  MDNS.addService("http", "tcp", HttpPort);
+  MDNS.addServiceTxt("http", "tcp", "path", "/");
+  MDNS.addService("gardener", "tcp", HttpPort);
+  MDNS.addServiceTxt("gardener", "tcp", "api", "/api");
+
+  String line = "mdns: " + host + ".local, _http._tcp at /, _gardener._tcp at /api";
   logger_.info(line.c_str());
 }
 

@@ -63,6 +63,12 @@ back. The serial log prints the portal name, the join attempts and the address t
 on. The page and the API are unauthenticated on whatever network the board joins, the same trust
 the serial line carries.
 
+The board answers mDNS on whichever interface is up, under the setup network's name in lower case:
+`http://gardener-<suffix>.local/` is the page, and the API is advertised as `_gardener._tcp` on the
+same port with an `api=/api` TXT record, beside `_http._tcp` for the page. A client that joined the
+access point can use the name as well as the address, so the page is reachable before any address
+is known.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.

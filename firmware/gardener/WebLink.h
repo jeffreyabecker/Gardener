@@ -21,7 +21,8 @@ struct WifiNetwork {
 // The device's web link: the page and the API over HTTP, and the radio that carries them. It serves
 // on whichever interface the radio has up, and when there is no network to join it is the setup
 // access point itself — the DNS server answers every name with that address, so a phone that joins
-// it opens the page.
+// it opens the page. It answers mDNS under the setup network's own name, so the page has an address
+// before the client knows the board's.
 //
 // Every machine call goes through the same SystemControl the serial grammar uses; the results are
 // this link's own wording, form-encoded, because a form body is what a browser page reads back
@@ -69,6 +70,9 @@ class WebLink {
                          const String& body);
   static String bodyOf(httpd_req_t* request);
   static bool onPortal(httpd_req_t* request);
+
+  // --- the board's name on the network -------------------------------------
+  void startMdns();
 
   SystemControl& control_;
   Logger& logger_;
