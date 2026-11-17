@@ -37,7 +37,7 @@ without polling. Its own word keeps it clear of the replies a controller is wait
 ## Web
 
 The sketch joins a WiFi network, or runs its own setup access point when it has none to join, and
-serves a page at `/` over the same four verbs:
+serves a page tree at `/` and the API the page drives over the same four verbs:
 
 | call | result |
 | --- | --- |
@@ -69,6 +69,20 @@ same port with an `api=/api` TXT record, beside `_http._tcp` for the page. A cli
 access point can use the name as well as the address, so the page is reachable before any address
 is known.
 
+The page is a file tree on the board, not a string in the firmware: everything under
+[firmware/gardener/data/www](./firmware/gardener/data/www) becomes the LittleFS image that
+`--task data` builds, and a `GET` is the matching path inside it — `/` and `/dir/` serve that
+directory's `index.html`, `/page.css` serves the stylesheet beside it, and a URI with `..` in it is
+refused. A file added to the folder is a URL; splitting the page into files is what `index.html`,
+`page.css` and `page.js` there already do. A `GET` that matches nothing is the portal's landing
+while the setup access point is up and a 404 otherwise, and a missing tree answers
+`404 ok=0&err=no_page` — the serial link still works, which is how a board without an image is
+looked at.
+
+The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
+form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
+new image: re-flashing the page tree brings the setup access point back.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
@@ -77,8 +91,15 @@ Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
 arduino-cli core install esp32:esp32
 python scripts/arduino.py --task build
 python scripts/arduino.py --task upload --port COM5
+python scripts/arduino.py --task data --port COM5
 python scripts/arduino.py --task monitor --port COM5
 ```
+
+`--task upload` writes the page image as well as the sketch, and `--task data` writes the image on
+its own. The image is built with the core's `mklittlefs` and written with its `esptool` at the
+offset the board's own partition table gives the `spiffs` partition, so a different scheme needs no
+edit here. The write is skipped while `data/` is unchanged, since the partition also holds the
+stored network; a page edit rewrites it and the board comes back as its access point.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
@@ -87,8 +108,8 @@ without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 law, the serial link and the three drivers that fill its parts — is the firmware rather than a
 sketchbook copy. The board it runs on sits beside the sketch in
 [firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link and
-the tasks that drive them. The web link uses the ESP-IDF HTTP server, `DNSServer` and `Preferences`
-from the core, so there is no extra library to install.
+the tasks that drive them. The web link uses the ESP-IDF HTTP server, `DNSServer`, `LittleFS` and
+`ESPmDNS` from the core, so there is no extra library to install.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
 define set, so the next one compiles only what changed since, header dependents included.

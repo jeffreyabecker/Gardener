@@ -2,9 +2,18 @@
 """Wrapper around arduino-cli for the Gardener firmware.
 
 --task build    compile the sketch (uses the project local libraries folder)
---task upload   compile and upload, auto-detecting the serial port
+--task upload   compile, upload, then write the page image
+--task data     build the LittleFS image from the sketch's `data` folder and write it
 --task monitor  open the serial monitor at 115200 baud
 --task clean    remove the build output
+
+The page is not in the firmware. Everything under `firmware/gardener/data/www` becomes the board's
+LittleFS partition, and a GET is the matching path inside that tree, so a stylesheet or a second
+page is a file in the folder rather than a rebuild. `--task data` builds that image with
+`mklittlefs` and writes it with `esptool` at the offset the board's own partition table gives it;
+the write is skipped while the folder is unchanged, because the partition also holds the network
+the board stored and rewriting it would clear that. A page edit does rewrite it, and the board
+comes back as its setup access point.
 
 `--define NAME=VALUE` sets one of the rig's own numbers, and repeats. `PUMP_FLOW_LPM`,
 `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`, `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and
@@ -34,6 +43,17 @@ SKETCH = ROOT / "firmware" / "gardener"
 
 # The build output. arduino-cli's build path is a subdirectory of it, one per configuration.
 BUILD_DIR = SKETCH / "build"
+
+# The page tree, and the image built from it. It is one partition with the round trip's other half:
+# the network the board stores is a file at the filesystem's root, so an image write clears it.
+DATA = SKETCH / "data"
+IMAGE = BUILD_DIR / "littlefs.bin"
+IMAGE_STAMP = BUILD_DIR / "littlefs.stamp"
+
+# The geometry mklittlefs is given, in the units a NOR flash partition has: 4 KB blocks and the
+# 256-byte pages the tool expects to write.
+FLASH_BLOCK = 4096
+FLASH_PAGE = 256
 
 # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial to it,
 # which is what puts the interface on the USB-C socket while leaving the ROM downloader on the same
@@ -185,6 +205,75 @@ def clean():
     print(f"{SKETCH.name} build output removed")
 
 
+def tool(directory, *names):
+    """A core tool's executable. The core ships `mklittlefs.exe` and `esptool.exe` on Windows and
+    the bare names elsewhere, so the caller passes both and the first that exists wins."""
+    for name in names:
+        path = Path(directory) / name
+        if path.exists():
+            return str(path)
+    sys.exit(f"none of {' '.join(names)} is in {directory}")
+
+
+def partition(properties):
+    """The spiffs row of the board's own partition table: the offset the image is written at and the
+    size the tool is given, so neither is a number this script invented."""
+    table = (Path(properties["runtime.platform.path"]) / "tools" / "partitions"
+             / f"{properties['build.partitions']}.csv")
+    for line in table.read_text(encoding="utf-8").splitlines():
+        fields = [field.strip() for field in line.split(",")]
+        if len(fields) >= 5 and fields[1] == "data" and fields[2] == "spiffs":
+            return int(fields[3], 0), int(fields[4], 0)
+    sys.exit(f"{table.name} has no spiffs partition to put the page in")
+
+
+def image_stamp():
+    """What an image is made of, as one hash: the tree's files and the port it was written to. A
+    second board is a different port and so gets its own write."""
+    digest = hashlib.sha1()
+    for path in sorted(DATA.rglob("*")):
+        if path.is_file():
+            digest.update(str(path.relative_to(DATA)).encode())
+            digest.update(path.read_bytes())
+    digest.update((PORT or "").encode())
+    return digest.hexdigest()
+
+
+def write_image():
+    """Build the page image and write it, unless the tree is what the last write left on the board.
+
+    Writing the partition clears the network the board stored beside the page, so a firmware-only
+    upload must not do it; a page edit must, and the board then comes up as its access point.
+    """
+    if not DATA.is_dir():
+        sys.exit(f"{DATA} is missing; the page tree is what the image is built from")
+
+    stamp = image_stamp()
+    if IMAGE.exists() and IMAGE_STAMP.exists() and \
+            IMAGE_STAMP.read_text(encoding="utf-8").strip() == stamp:
+        print("page tree unchanged, image not written")
+        return
+
+    device = device_port()
+    if not device:
+        sys.exit("no serial port found, pass --port COMx")
+
+    properties = build_properties(FQBN)
+    offset, size = partition(properties)
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    run([tool(properties["runtime.tools.mklittlefs.path"], "mklittlefs.exe", "mklittlefs"),
+         "-c", str(DATA), "-b", str(FLASH_BLOCK), "-p", str(FLASH_PAGE), "-s", hex(size),
+         str(IMAGE)])
+
+    print(f"writing the page tree to {device} at {hex(offset)}")
+    run([tool(properties["runtime.tools.esptool_py.path"], "esptool.exe", "esptool"),
+         "--chip", properties["build.mcu"], "--port", device, "--baud", "921600",
+         "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z",
+         "--flash_mode", "keep", "--flash_freq", "keep", "--flash_size", "keep",
+         hex(offset), str(IMAGE)])
+    IMAGE_STAMP.write_text(stamp + "\n", encoding="utf-8")
+
+
 def build():
     compile_sketch()
 
@@ -195,6 +284,11 @@ def upload():
         sys.exit("no serial port found, pass --port COMx")
     print(f"uploading {SKETCH.name} to {device}")
     compile_sketch("--upload", "-p", device)
+    write_image()
+
+
+def data():
+    write_image()
 
 
 def monitor():
@@ -212,7 +306,7 @@ def main():
     global FQBN, PORT, VERBOSE, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
-    parser.add_argument("--task", choices=["build", "upload", "monitor", "clean"],
+    parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "clean"],
                         default="build", help="what to do (default: build)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
@@ -233,6 +327,8 @@ def main():
         build()
     elif args.task == "upload":
         upload()
+    elif args.task == "data":
+        data()
     elif args.task == "monitor":
         monitor()
 

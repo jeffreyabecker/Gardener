@@ -1,7 +1,7 @@
 #include "WebLink.h"
 
 #include <ESPmDNS.h>
-#include <Preferences.h>
+#include <LittleFS.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -9,7 +9,6 @@
 #include <stdint.h>
 
 #include "Form.h"
-#include "UiPage.h"
 #include "core/Knob.h"
 #include "core/Logger.h"
 #include "core/RunState.h"
@@ -38,7 +37,9 @@ GARDENER_KNOB_VALID(uint32_t, HttpStackBytes, GARDENER_HTTP_STACK_BYTES, 8192,
 constexpr UBaseType_t WifiTaskPriority = 1;
 constexpr BaseType_t WifiTaskCore = 0;
 constexpr uint32_t TickMs = 20;
-constexpr const char* NvsNamespace = "wifi";
+constexpr const char* WwwRoot = "/www";
+constexpr const char* PagePath = "/www/index.html";
+constexpr const char* ConfigPath = "/wifi.conf";
 constexpr uint8_t MaxRoutes = 12;
 constexpr uint32_t MaxFormBytes = 256;
 constexpr const char* FormType = "application/x-www-form-urlencoded";
@@ -57,12 +58,28 @@ void wifiTask(void* arg) {
 WebLink::WebLink(SystemControl& control, Logger& logger) : control_(control), logger_(logger) {}
 
 void WebLink::begin() {
-  Preferences prefs;
-  prefs.begin(NvsNamespace, true);
-  ssid_ = prefs.getString("ssid", "");
-  pass_ = prefs.getString("pass", "");
-  keepPortal_ = prefs.getBool("keep_ap", false);
-  prefs.end();
+  // No format on a failed mount: the config lives here, and a partition that will not mount is a
+  // board to look at over the cable rather than one to wipe.
+  mounted_ = LittleFS.begin(false);
+  if (mounted_) {
+    int pages = 0;
+    File tree = LittleFS.open(WwwRoot);
+    for (File entry = tree.openNextFile(); entry; entry = tree.openNextFile())
+      pages++;
+    File page = LittleFS.open(PagePath, "r");
+    String line = "page: " + String(WwwRoot) + ", " + String(pages) + " files, index.html ";
+    if (page) {
+      line += String((uint32_t)page.size());
+      line += " bytes";
+      page.close();
+    } else {
+      line += "missing";
+    }
+    logger_.info(line.c_str());
+  } else {
+    logger_.warn("page: no filesystem, the page will not serve");
+  }
+  load();
 
   // The suffix tells two boards on the same bench apart in a WiFi list.
   String suffix((uint16_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
@@ -97,7 +114,6 @@ void WebLink::begin() {
     return;
   }
 
-  route("/", HTTP_GET, onPage);
   route("/api/status", HTTP_GET, onStatus);
   route("/api/set", HTTP_POST, onSet);
   route("/api/vent", HTTP_POST, onVent);
@@ -106,8 +122,11 @@ void WebLink::begin() {
   route("/api/wifi", HTTP_POST, onWifiSave);
   route("/api/wifi/scan", HTTP_GET, onScan);
   route("/api/wifi/forget", HTTP_POST, onWifiForget);
-  // Last, so it can only take what no route above did.
-  route("/*", HTTP_GET, onCatchAll);
+  // The page tree last, so it can only take what no route above did. The root is registered on its
+  // own as well as under the wildcard, because the matcher's treatment of the bare slash is not
+  // something to bet the page on.
+  route("/", HTTP_GET, onStatic);
+  route("/*", HTTP_GET, onStatic);
 
   String line = "http: server on port ";
   line += String(HttpPort);
@@ -257,12 +276,31 @@ void WebLink::stopPortal() {
 }
 
 void WebLink::save() const {
-  Preferences prefs;
-  prefs.begin(NvsNamespace, false);
-  prefs.putString("ssid", ssid_);
-  prefs.putString("pass", pass_);
-  prefs.putBool("keep_ap", keepPortal_);
-  prefs.end();
+  String line = "ssid=";
+  line += formEncoded(ssid_);
+  line += "&pass=";
+  line += formEncoded(pass_);
+  line += "&keep_ap=";
+  line += keepPortal_ ? "1" : "0";
+
+  File file = LittleFS.open(ConfigPath, "w");
+  if (!file) {
+    logger_.warn("wifi: the network could not be stored");
+    return;
+  }
+  file.print(line);
+  file.close();
+}
+
+void WebLink::load() {
+  File file = LittleFS.open(ConfigPath, "r");
+  if (!file) return;
+
+  const String line = file.readString();
+  file.close();
+  ssid_ = formField(line, "ssid");
+  pass_ = formField(line, "pass");
+  keepPortal_ = formField(line, "keep_ap") == "1";
 }
 
 String WebLink::address() const {
@@ -308,8 +346,47 @@ esp_err_t WebLink::reply(httpd_req_t* request, const char* code, const char* typ
   return httpd_resp_send(request, body.c_str(), body.length());
 }
 
-esp_err_t WebLink::onPage(httpd_req_t* request) {
-  return reply(request, "200 OK", "text/html", UiPage);
+esp_err_t WebLink::onStatic(httpd_req_t* request) {
+  // A GET is a path inside the document root and nothing else: no climbing out of it, and no
+  // reaching the config that sits beside it.
+  String path = WwwRoot;
+  path += request->uri;
+  if (path.indexOf("..") >= 0) return miss(request);
+  if (path.endsWith("/")) path += "index.html";
+
+  File file;
+  if (from(request)->mounted_) file = LittleFS.open(path, "r");
+  if (!file) return miss(request);
+
+  const String body = file.readString();
+  file.close();
+  return reply(request, "200 OK", typeOf(path), body);
+}
+
+// A path nothing serves. On the setup access point that is the portal's landing — the OS probes ask
+// for URLs of their own, and a redirect to the page is what opens the sheet — but only while there
+// is a page to land on: a redirect with no index behind it would just loop.
+esp_err_t WebLink::miss(httpd_req_t* request) {
+  WebLink* self = from(request);
+  if (!self->mounted_ || !LittleFS.exists(PagePath)) {
+    return reply(request, "404 Not Found", FormType, "ok=0&err=no_page");
+  }
+  if (self->portalUp_ && onPortal(request)) {
+    httpd_resp_set_status(request, "302 Found");
+    httpd_resp_set_hdr(request, "Location", "/");
+    return httpd_resp_send(request, nullptr, 0);
+  }
+  return reply(request, "404 Not Found", "text/plain", "not found\n");
+}
+
+const char* WebLink::typeOf(const String& path) {
+  if (path.endsWith(".html")) return "text/html";
+  if (path.endsWith(".css")) return "text/css";
+  if (path.endsWith(".js")) return "text/javascript";
+  if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".ico")) return "image/x-icon";
+  return "application/octet-stream";
 }
 
 esp_err_t WebLink::onStatus(httpd_req_t* request) {
@@ -431,19 +508,6 @@ esp_err_t WebLink::onWifiSave(httpd_req_t* request) {
 esp_err_t WebLink::onWifiForget(httpd_req_t* request) {
   from(request)->forget();
   return reply(request, "200 OK", FormType, "ok=1");
-}
-
-// The captive portal's landing: a path nothing serves, asked from the access point's own subnet,
-// sends the client to the page. The OS probes ask for their own URLs, so this is what opens the
-// portal sheet.
-esp_err_t WebLink::onCatchAll(httpd_req_t* request) {
-  WebLink* self = from(request);
-  if (self->portalUp_ && onPortal(request)) {
-    httpd_resp_set_status(request, "302 Found");
-    httpd_resp_set_hdr(request, "Location", "/");
-    return httpd_resp_send(request, nullptr, 0);
-  }
-  return reply(request, "404 Not Found", "text/plain", "not found\n");
 }
 
 bool WebLink::onPortal(httpd_req_t* request) {

@@ -24,6 +24,11 @@ struct WifiNetwork {
 // it opens the page. It answers mDNS under the setup network's own name, so the page has an address
 // before the client knows the board's.
 //
+// The page is not in the firmware: everything under `data/www` of the sketch becomes the image in
+// the board's LittleFS partition, and a GET is the matching path inside that tree, so a stylesheet
+// or a second page is a file in the folder rather than a rebuild. The network choice is a file in
+// the same partition, at the filesystem root where no URI can reach it.
+//
 // Every machine call goes through the same SystemControl the serial grammar uses; the results are
 // this link's own wording, form-encoded, because a form body is what a browser page reads back
 // without a parser.
@@ -45,6 +50,7 @@ class WebLink {
   void startPortal();
   void stopPortal();
   void save() const;
+  void load();
   void join(const String& ssid, const String& pass, bool keepPortal);
   void forget();
   String address() const;
@@ -53,7 +59,6 @@ class WebLink {
   int scan(WifiNetwork* networks, int capacity);
 
   // --- the server ----------------------------------------------------------
-  static esp_err_t onPage(httpd_req_t* request);
   static esp_err_t onStatus(httpd_req_t* request);
   static esp_err_t onSet(httpd_req_t* request);
   static esp_err_t onVent(httpd_req_t* request);
@@ -62,7 +67,9 @@ class WebLink {
   static esp_err_t onScan(httpd_req_t* request);
   static esp_err_t onWifiSave(httpd_req_t* request);
   static esp_err_t onWifiForget(httpd_req_t* request);
-  static esp_err_t onCatchAll(httpd_req_t* request);
+  static esp_err_t onStatic(httpd_req_t* request);
+  static esp_err_t miss(httpd_req_t* request);
+  static const char* typeOf(const String& path);
 
   static WebLink* from(httpd_req_t* request);
   void route(const char* uri, http_method method, esp_err_t (*handler)(httpd_req_t*));
@@ -89,6 +96,7 @@ class WebLink {
   uint32_t lastRetryMs_ = 0;
   String portalSsid_;
   DNSServer dns_;
+  bool mounted_ = false;
 
   httpd_handle_t server_ = nullptr;
 };

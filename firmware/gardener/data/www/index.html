@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gardener</title>
+<link rel="stylesheet" href="/page.css">
+</head>
+<body>
+<main>
+  <h1>Gardener</h1>
+
+  <section>
+    <h2>Machine</h2>
+    <div class="stat">
+      <div><span>State</span><b id="state">-</b></div>
+      <div><span>Pressure</span><b id="pressure">-</b></div>
+      <div><span>Target</span><b id="target">-</b></div>
+      <div><span>Duty</span><b id="duty">-</b></div>
+      <div><span>Fault</span><b id="fault">-</b></div>
+    </div>
+    <div class="row">
+      <input id="setpoint" type="number" min="0" max="60" step="0.1" value="20" style="width:96px">
+      <button onclick="act('/api/set', {target: setpoint.value})">Set</button>
+      <button class="secondary" onclick="act('/api/vent')">Vent</button>
+      <button class="secondary" onclick="act('/api/reset')">Reset</button>
+    </div>
+    <p id="message"></p>
+  </section>
+
+  <section>
+    <h2>WiFi</h2>
+    <div class="stat">
+      <div><span>Mode</span><b id="mode">-</b></div>
+      <div><span>Network</span><b id="network">-</b></div>
+      <div><span>Address</span><b id="address">-</b></div>
+    </div>
+    <div class="row">
+      <button class="secondary" onclick="scan()">Scan</button>
+      <input id="ssid" placeholder="network name" autocomplete="off">
+      <input id="pass" type="password" placeholder="password" autocomplete="current-password">
+    </div>
+    <ul id="networks"></ul>
+    <div class="row">
+      <label class="muted"><input id="keep" type="checkbox">
+        keep the setup network on while joined</label>
+    </div>
+    <div class="row">
+      <button onclick="saveWifi()">Save and join</button>
+      <button class="secondary" onclick="act('/api/wifi/forget')">Forget</button>
+    </div>
+    <p class="muted">Saving joins the selected network. If the setup network disappears, the board
+      is on the new network and the serial log prints its address.</p>
+  </section>
+</main>
+
+<script src="/page.js"></script>
+</body>
+</html>
