@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gardener Interval</title>
+<link rel="stylesheet" href="/page.css">
+</head>
+<body>
+<main>
+  <h1>Gardener</h1>
+  <nav>
+    <a href="/">Machine</a>
+    <span aria-current="page">Interval</span>
+    <a href="/wifi.html">WiFi</a>
+  </nav>
+
+  <section>
+    <h2>Interval</h2>
+    <div class="stat">
+      <div><span>State</span><b id="state">-</b></div>
+      <div><span>Pressure</span><b id="pressure">-</b></div>
+      <div><span>Target</span><b id="target">-</b></div>
+      <div><span>Intervals</span><b id="progress">-</b></div>
+      <div><span>Phase</span><b id="phase">-</b></div>
+      <div><span>Left</span><b id="left">-</b></div>
+    </div>
+    <div class="row">
+      <label class="muted">target kPa
+        <input id="targetKpa" type="number" min="0" max="60" step="0.1" value="30"
+               style="width:80px"></label>
+      <button class="secondary" onclick="nudgeTarget(-1)">&minus;</button>
+      <button class="secondary" onclick="nudgeTarget(1)">+</button>
+      <label class="muted">work s
+        <input id="work" type="number" min="1" max="3600" step="1" value="30"
+               style="width:70px"></label>
+      <label class="muted">rest s
+        <input id="rest" type="number" min="0" max="3600" step="1" value="10"
+               style="width:70px"></label>
+      <label class="muted">count
+        <input id="count" type="number" min="1" max="999" step="1" value="3"
+               style="width:65px"></label>
+    </div>
+    <div class="row">
+      <button id="startButton" onclick="startPlan()">Start</button>
+      <button class="secondary" onclick="stopPlan()">Stop</button>
+    </div>
+    <p id="message"></p>
+    <p class="muted">The plan runs from this page, so it ends when the tab does and the machine keeps
+      whatever phase it was in. Each work period is set and each rest is a vent, and the machine's
+      own ceiling still ends a work period that outlasts it. The target stays live while the plan
+      runs: while the machine is working a new one is applied at once, and during a rest it is what
+      the next work period pulls to.</p>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+<script src="/interval.js"></script>
+</body>
+</html>
