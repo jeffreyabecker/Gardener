@@ -1,9 +1,10 @@
 #include "hal/impl/SolenoidValve.h"
 
 #include <Arduino.h>
+#include <esp32-hal-gpio.h>
 #include <type_traits>
 
-namespace gardener::runtime {
+namespace gardener {
 
 // Nothing else spells the interface out, so a verb added to VentValve and not implemented here would
 // leave these classes abstract - silently, until something tried to construct one.
@@ -36,4 +37,4 @@ bool SolenoidValve::energised() const { return open_ ? energiseWhenOpen() : !ene
 
 void SolenoidValve::write(bool energise) { digitalWrite(pin_, energise ? HIGH : LOW); }
 
-}  // namespace gardener::runtime
+}  // namespace gardener

@@ -33,9 +33,9 @@ GARDENER = ROOT / "libraries" / "Gardener"
 BUILD = TOOL / "build"
 EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 
-# A source naming any of these needs a filesystem or an RTOS, and so is not part of what the suite
-# compiles.
-PLATFORM_INCLUDES = ("<FS.h>", "<Wire.h>", "freertos/", "<SD.h>")
+# A source naming any of these needs a filesystem, an RTOS or the board's own peripherals, and so is
+# not part of what the suite compiles.
+PLATFORM_INCLUDES = ("<FS.h>", "<Wire.h>", "freertos/", "<SD.h>", "esp32-hal-")
 
 # The API's own sources, and the two a board's C library would provide.
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")

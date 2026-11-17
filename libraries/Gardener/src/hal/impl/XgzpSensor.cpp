@@ -1,11 +1,12 @@
 #include "hal/impl/XgzpSensor.h"
 
 #include <Arduino.h>
+#include <esp32-hal-adc.h>
 #include <type_traits>
 
 #include "core/Knob.h"
 
-namespace gardener::runtime {
+namespace gardener {
 namespace {
 
 // The part's own numbers, at its 3.3 V variant: the output spans 0.2 V at -100 kPa to 2.7 V at
@@ -129,4 +130,4 @@ float AnalogSensor::pressureKpa() const {
   return depth > 0.0f ? depth : 0.0f;
 }
 
-}  // namespace gardener::runtime
+}  // namespace gardener

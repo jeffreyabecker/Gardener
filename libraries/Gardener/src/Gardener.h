@@ -1,9 +1,9 @@
 #pragma once
 
 // Umbrella header for the Gardener firmware. A build includes this, and the Runtime library's
-// Runtime.h for the parts a board supplies and the tasks that drive them: it names the machine, the
-// control a front end asks and the serial link in front of it. Nothing here names a pin, a bus, a
-// file store or a vendor header.
+// Runtime.h for the builder of the board's parts and the tasks that drive them: it names the machine,
+// the control a front end asks and the serial link in front of it. The parts' drivers sit beside this
+// header under hal/impl, which is where the pins and the vendor headers are.
 
 #include "core/Logger.h"
 #include "core/SerialLogger.h"

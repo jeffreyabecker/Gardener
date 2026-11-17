@@ -1,13 +1,14 @@
 #include "hal/impl/PwmPump.h"
 
 #include <Arduino.h>
+#include <esp32-hal-ledc.h>
 #include <math.h>
 #include <type_traits>
 
 #include "core/Knob.h"
 #include "core/Math.h"
 
-namespace gardener::runtime {
+namespace gardener {
 namespace {
 GARDENER_KNOB_VALID(uint32_t, MaxStepMs, GARDENER_PUMP_MAX_STEP_MS, 250,
                     GARDENER_PUMP_MAX_STEP_MS > 0,
@@ -68,4 +69,4 @@ void PwmPump::update(uint32_t nowMs) {
   }
 }
 
-}  // namespace gardener::runtime
+}  // namespace gardener

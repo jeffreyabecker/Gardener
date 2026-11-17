@@ -11,9 +11,9 @@ and that is the check to run.
 **The sketch build is not the validation.** `python scripts/arduino.py --task build` cross-compiles
 the sketch for the board, and it is the slower path by minutes. For the C++ the suite compiles it
 says nothing the suite does not already say; it is asked for only what the suite cannot reach —
-`libraries/Runtime`, the sketch itself, and an edit to the build files the script reads. Nothing
-checks the layer rule either way, so a stray `core/` include that reaches upward is a review catch
-rather than a failure of one.
+`libraries/Runtime`, the drivers under `libraries/Gardener/src/hal/impl`, the sketch itself, and an
+edit to the build files the script reads. Nothing checks the layer rule either way, so a stray
+`core/` include that reaches upward is a review catch rather than a failure of one.
 
 **Run a check when the compiler is the question.** Both compile C++ and nothing else: a document
 cannot change what either says, so editing one is not a reason to run them.

@@ -49,9 +49,9 @@ The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 `--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the control
-law and the serial link — is the firmware rather than a sketchbook copy. Beside it a build finds
-[libraries/Runtime](./libraries/Runtime), the board it runs on: the pump, sensor and valve drivers,
-the parts builder and the two tasks that drive them.
+law, the serial link and the three drivers that fill its parts — is the firmware rather than a
+sketchbook copy. Beside it a build finds [libraries/Runtime](./libraries/Runtime), the board it runs
+on: the parts builder and the two tasks that drive them.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
 define set, so the next one compiles only what changed since, header dependents included.
