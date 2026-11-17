@@ -11,8 +11,9 @@ constexpr uint32_t HeartbeatPeriodMs = 5000;
 
 }  // namespace
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control)
-    : stream_(stream), present_(present), logger_(logger), control_(control) {}
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control,
+                       WifiControl& wifi)
+    : stream_(stream), present_(present), logger_(logger), control_(control), wifi_(wifi) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();

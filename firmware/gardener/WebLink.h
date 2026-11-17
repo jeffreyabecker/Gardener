@@ -5,18 +5,14 @@
 #include <esp_http_server.h>
 #include <stdint.h>
 
+#include "core/WifiControl.h"
+
 namespace gardener {
 class Logger;
 class SystemControl;
 }  // namespace gardener
 
 namespace gardener::runtime {
-
-// One network a scan found, as the WiFi page lists it.
-struct WifiNetwork {
-  String ssid;
-  int32_t rssi;
-};
 
 // The device's web link: the page and the API over HTTP, and the radio that carries them. It serves
 // on whichever interface the radio has up, and when there is no network to join it is the setup
@@ -36,13 +32,25 @@ struct WifiNetwork {
 // It owns its beat: the join's timeout and retries and the portal's DNS are pumped by tick() on the
 // task begin() starts, because DNSServer has no task of its own. The HTTP handlers run on the
 // httpd's, and only ever read the control or post into its queue.
-class WebLink {
+//
+// The network half of that control is WifiControl, which the serial link holds as well: one radio,
+// reached from the page and from the wire.
+class WebLink : public WifiControl {
  public:
   WebLink(SystemControl& control, Logger& logger);
 
   // Loads the stored network, starts the radio and its task, then the server.
   void begin();
   void tick(uint32_t nowMs);
+
+  // --- the network, as a front end asks it ---------------------------------
+  WifiStatus status() const override;
+  int scan(WifiNetwork* networks, int capacity) override;
+  void setSsid(const String& ssid) override;
+  void setPass(const String& pass) override;
+  void setKeepPortal(bool keepPortal) override;
+  void join() override;
+  void forget() override;
 
  private:
   // --- the radio -----------------------------------------------------------
@@ -51,12 +59,8 @@ class WebLink {
   void stopPortal();
   void save() const;
   void load();
-  void join(const String& ssid, const String& pass, bool keepPortal);
-  void forget();
   String address() const;
   const char* modeName() const;
-  // Scans and stores up to `capacity` networks; returns how many it stored.
-  int scan(WifiNetwork* networks, int capacity);
 
   // --- the server ----------------------------------------------------------
   static esp_err_t onStatus(httpd_req_t* request);

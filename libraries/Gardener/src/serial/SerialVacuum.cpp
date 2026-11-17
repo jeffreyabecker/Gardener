@@ -149,6 +149,10 @@ void SerialLink::execute(Stream& io, const String& line) {
     reset(io, args, control_);
     return;
   }
+  if (verb == "wifi") {
+    wifiCommand(io, args);
+    return;
+  }
 
   io.print("err unknown_verb ");
   io.print(verb);

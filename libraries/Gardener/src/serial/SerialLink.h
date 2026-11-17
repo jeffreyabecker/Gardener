@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "core/Knob.h"
+#include "core/WifiControl.h"
 
 namespace gardener {
 class Logger;
@@ -28,7 +29,8 @@ class SerialLink {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control);
+  SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control,
+             WifiControl& wifi);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -39,6 +41,8 @@ class SerialLink {
   // The machine's commands: one line, already trimmed and bounded, parsed into a verb and its
   // argument.
   void execute(Stream& io, const String& line);
+  // The network's commands: everything after the `wifi` verb, parsed the same way.
+  void wifiCommand(Stream& io, const String& args) const;
   // The status line: the fields `get` answers with, which the heartbeat repeats. It goes out in one
   // write, because the S3's USB CDC drops a write of its own when its ring is busy and a line built
   // from twenty of them loses whichever ones lost the race.
@@ -52,6 +56,7 @@ class SerialLink {
   PresenceFn present_;
   Logger& logger_;
   SystemControl& control_;
+  WifiControl& wifi_;
   // The line being assembled, without its LF.
   String buffer_;
   // Set when a line outgrew CommandLineMax: the rest of it is dropped and it is answered once.

@@ -12,6 +12,7 @@
 #include "Clock.h"
 #include "TextStream.h"
 #include "fakes/Parts.h"
+#include "fakes/Wifi.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
 #include "machine/SystemControl.h"
@@ -28,6 +29,7 @@ using gardener::host::TextStream;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
+using gardener::test::FakeWifi;
 using gardener::test::RecordingLogger;
 
 // The queue the link posts into: everything fits, so a case reads back what the grammar queued.
@@ -56,7 +58,7 @@ class OpenQueue : public CommandQueue {
 struct Bench {
   Bench()
       : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue),
-        link(io, nullptr, logger, control) {
+        link(io, nullptr, logger, control, wifi) {
     gardener::host::reset();
     machine.boot();
     link.begin();
@@ -73,6 +75,7 @@ struct Bench {
   FakePump pump;
   FakeSensor sensor;
   FakeValve valve;
+  FakeWifi wifi;
   RecordingLogger logger;
   OpenQueue queue;
   Machine machine;

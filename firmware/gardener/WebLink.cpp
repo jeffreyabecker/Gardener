@@ -218,11 +218,12 @@ void WebLink::startJoin() {
   logger_.info(line.c_str());
 }
 
-void WebLink::join(const String& ssid, const String& pass, bool keepPortal) {
-  ssid_ = ssid;
-  pass_ = pass;
-  keepPortal_ = keepPortal;
-  save();
+void WebLink::join() {
+  // Nothing to join is the portal, not a radio left in a client mode with no network.
+  if (ssid_.isEmpty()) {
+    startPortal();
+    return;
+  }
 
   joinedReported_ = false;
   portalMandatory_ = false;
@@ -234,6 +235,30 @@ void WebLink::join(const String& ssid, const String& pass, bool keepPortal) {
   WiFi.begin(ssid_.c_str(), pass_.c_str());
   String line = "wifi: joining " + ssid_;
   logger_.info(line.c_str());
+}
+
+void WebLink::setSsid(const String& ssid) {
+  ssid_ = ssid;
+  save();
+}
+
+void WebLink::setPass(const String& pass) {
+  pass_ = pass;
+  save();
+}
+
+void WebLink::setKeepPortal(bool keepPortal) {
+  keepPortal_ = keepPortal;
+  save();
+}
+
+WifiStatus WebLink::status() const {
+  WifiStatus now;
+  now.ssid = ssid_;
+  now.address = address();
+  now.mode = modeName();
+  now.keepPortal = keepPortal_;
+  return now;
 }
 
 void WebLink::forget() {
@@ -501,7 +526,10 @@ esp_err_t WebLink::onWifiSave(httpd_req_t* request) {
     return reply(request, "400 Bad Request", FormType, "ok=0&err=missing_ssid");
   }
 
-  from(request)->join(ssid, pass, keepPortal);
+  from(request)->setSsid(ssid);
+  from(request)->setPass(pass);
+  from(request)->setKeepPortal(keepPortal);
+  from(request)->join();
   return reply(request, "200 OK", FormType, "ok=1");
 }
 

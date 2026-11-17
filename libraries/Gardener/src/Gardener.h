@@ -7,6 +7,7 @@
 
 #include "core/Logger.h"
 #include "core/SerialLogger.h"
+#include "core/WifiControl.h"
 #include "machine/Machine.h"
 #include "machine/SystemControl.h"
 #include "serial/SerialLink.h"
