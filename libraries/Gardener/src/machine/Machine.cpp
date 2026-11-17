@@ -1,5 +1,7 @@
 #include "machine/Machine.h"
 
+#include <Arduino.h>
+
 #include "core/Logger.h"
 #include "core/firmwareversion.h"
 
@@ -24,10 +26,6 @@ void Machine::boot() {
   logger_.info(sensorOk ? "sensor: online" : "sensor: not found");
   logger_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
-
-  // The fitted valve is the fail-safe: a normally open part vents when the coil is not held, so
-  // the bit says the resting state is safe rather than that a valve is fitted at all.
-  if (!vacuum_.vent().energiseWhenOpen()) capabilities_ |= FailSafeValve;
 
   // The loop the build describes: the two rig numbers and the gains they derive, one line so a
   // bench read can confirm the loop the device will run.

@@ -2,10 +2,8 @@
 #include <stdint.h>
 
 #include "machine/Machine.h"
-#include "machine/MachineCommand.h"
-#include "machine/VacuumSystem.h"
+#include "machine/SystemControl.h"
 #include "serial/SerialLink.h"
-#include "storage/DeviceSettings.h"
 
 namespace gardener {
 namespace {
@@ -15,38 +13,10 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
-  VacuumSystem& vacuum = machine.vacuum();
-  io.print("ok pressure_kpa=");
-  io.print(vacuum.currentPressureKpa(), 2u);
-
-  // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
-  // the one that holds the chamber released.
-  io.print(" target=");
-  io.print(vacuum.targetPressureKpa(), 1u);
-
-  io.print(" floor=");
-  io.print(ControlFloorKpa, 1u);
-  io.print(" duty=");
-  io.print(vacuum.pump().dutyPercent(), 1u);
-  io.print(" state=");
-  io.print(runStateName(vacuum.runState()));
-  io.print(" sensor=");
-  io.print(vacuum.sensor().present() ? "1" : "0");
-  io.print(" fault=");
-  const char* fault = vacuum.faultCode();
-  io.print(fault[0] ? fault : "none");
-  io.print(" hold=");
-  io.print(vacuum.running() ? vacuum.holdSeconds() : 0u);
-  // The longest run the device allows: its stored maximum, which is what a start is granted.
-  io.print(" max_run=");
-  io.print(maxRunSeconds(settings.maxDurationSeconds()));
-  io.print(" up=");
-  io.print(machine.uptimeMs());
-  io.print('\n');
-}
-
-void target(Stream& io, const String& args, CommandQueue& queue) {
+// The one line the wire adds to a set: which outcome the control reported, and how the wire says
+// it. Every decision behind the answer — the bounds, the ambient target, the refusal — is the
+// control's.
+void set(Stream& io, const String& args, SystemControl& control) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -67,80 +37,36 @@ void target(Stream& io, const String& args, CommandQueue& queue) {
   float pressureKpa = 0.0f;
   if (token != "-") pressureKpa = token.toFloat();
 
-  // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
-  if (!(pressureKpa >= 0.0f)) {
-    io.print("err out_of_range field=target value=");
-    io.print(token);
-    io.print(" min=0.0\n");
-    return;
-  }
-  if (pressureKpa > ControlFloorKpa) {
-    io.print("err out_of_range field=target value=");
-    io.print(token);
-    io.print(" max=");
-    io.print(ControlFloorKpa, 1u);
-    io.print('\n');
-    return;
-  }
-
-  const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  queue.post(set);
-  io.print("ok target=");
-  io.print(pressureKpa, 1u);
-  io.print('\n');
-}
-
-void start(Stream& io, const String& args, Machine& machine, const DeviceSettings& settings,
-           CommandQueue& queue) {
-  // The optional argument is the hold, in whole seconds. Without one the run gets the device's
-  // maximum, which is also its ceiling. A document that names no maximum leaves the machine's own.
-  const uint32_t maxSeconds = maxRunSeconds(settings.maxDurationSeconds());
-  uint32_t holdSeconds = maxSeconds;
-  if (!args.isEmpty()) {
-    const int space = args.indexOf(' ');
-    const String token = space < 0 ? args : args.substring(0, (unsigned int)space);
-    String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
-    extra.trim();
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
+  switch (control.set(pressureKpa)) {
+    case ServeResult::Ok:
+      io.print("ok target=");
+      io.print(pressureKpa, 1u);
+      io.print(" state=PULL\n");
       return;
-    }
-
-    const float seconds = token.toFloat();
-    if (seconds > (float)maxSeconds) {
-      io.print("err out_of_range field=hold value=");
+    case ServeResult::Released:
+      io.print("ok target=0.0 state=VENT\n");
+      return;
+    case ServeResult::BelowRange:
+      io.print("err out_of_range field=target value=");
+      io.print(token);
+      io.print(" min=0.0\n");
+      return;
+    case ServeResult::AboveRange:
+      io.print("err out_of_range field=target value=");
       io.print(token);
       io.print(" max=");
-      io.print(maxSeconds);
+      io.print(ControlFloorKpa, 1u);
       io.print('\n');
       return;
-    }
-    if (!(seconds >= 1.0f) || seconds != (float)(uint32_t)seconds) {
-      io.print("err out_of_range field=hold value=");
-      io.print(token);
-      io.print(" min=1\n");
+    case ServeResult::NotReady:
+      io.print("err not_ready ");
+      io.print(control.refusal());
+      io.print('\n');
       return;
-    }
-    holdSeconds = (uint32_t)seconds;
   }
-
-  // The refusal is a pure read of the machine's fault and reading, so it is answered from a dirty
-  // read; a would-succeed start is queued and the reply is optimistic.
-  const char* refusal = machine.vacuum().startRefusal();
-  if (refusal != nullptr) {
-    io.print("err not_ready ");
-    io.print(refusal);
-    io.print('\n');
-    return;
-  }
-  const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
-  queue.post(start);
-  io.print("ok state=PULL\n");
 }
 
-void stop(Stream& io, const String& args, CommandQueue& queue) {
+void vent(Stream& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -148,12 +74,11 @@ void stop(Stream& io, const String& args, CommandQueue& queue) {
     return;
   }
 
-  const MachineCommand stop{MachineCommand::Op::Stop};
-  queue.post(stop);
+  control.vent();
   io.print("ok state=VENT\n");
 }
 
-void reset(Stream& io, const String& args, CommandQueue& queue) {
+void reset(Stream& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -161,23 +86,37 @@ void reset(Stream& io, const String& args, CommandQueue& queue) {
     return;
   }
 
-  const MachineCommand reset{MachineCommand::Op::ResetFault};
-  queue.post(reset);
+  control.reset();
   io.print("ok state=IDLE\n");
 }
 
 }  // namespace
 
-// The machine's own commands: what a run is doing, the target it pulls to, and the three the control
-// tick applies.
-void SerialLink::executeVacuum(Stream& io) {
-  String line = io.readStringUntil('\n');
-  line.trim();
-  if (line.length() > CommandLineMax) {
-    io.print("err bad_argument\n");
-    return;
-  }
+// The status line both `get` and the heartbeat write, so the two cannot drift apart.
+void SerialLink::writeStatus(Stream& io, const char* prefix) const {
+  const SystemStatus status = control_.status();
 
+  String line = prefix;
+  line += "pressure_kpa=";
+  line += String(status.pressureKpa, 2u);
+
+  // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
+  // the one that holds the chamber released.
+  line += " target=";
+  line += String(status.targetKpa, 1u);
+
+  line += " state=";
+  line += runStateName(status.state);
+  line += " duty=";
+  line += String(status.dutyPercent, 1u);
+  line += " fault=";
+  line += (status.fault[0] ? status.fault : "none");
+  line += '\n';
+  io.print(line);
+}
+
+// The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
+void SerialLink::execute(Stream& io, const String& line) {
   const int space = line.indexOf(' ');
   String verb = space < 0 ? line : line.substring(0, (unsigned int)space);
   String args = space < 0 ? String() : line.substring((unsigned int)space + 1);
@@ -195,23 +134,19 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    get(io, parts_.machine, parts_.settings);
+    writeStatus(io, "ok ");
     return;
   }
-  if (verb == "target") {
-    target(io, args, queue_);
+  if (verb == "set") {
+    set(io, args, control_);
     return;
   }
-  if (verb == "start") {
-    start(io, args, parts_.machine, parts_.settings, queue_);
-    return;
-  }
-  if (verb == "stop") {
-    stop(io, args, queue_);
+  if (verb == "vent") {
+    vent(io, args, control_);
     return;
   }
   if (verb == "reset") {
-    reset(io, args, queue_);
+    reset(io, args, control_);
     return;
   }
 

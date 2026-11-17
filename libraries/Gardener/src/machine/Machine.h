@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include <stdint.h>
 
 #include "core/Knob.h"
@@ -14,14 +13,6 @@ class Logger;
 GARDENER_KNOB_VALID(uint32_t, ControlPeriodMs, GARDENER_CONTROL_PERIOD_MS, 50,
                     GARDENER_CONTROL_PERIOD_MS >= 10 && GARDENER_CONTROL_PERIOD_MS <= 1000,
                     "the control tick is the machine's beat, in milliseconds");
-// Shallowest non-zero target the loop will accept, in kPa below the ambient reference, and
-// inclusive: the wire publishes it as the `min` of `vacuum target`, so a pull of exactly this much
-// is accepted and anything gentler is refused rather than regulated. Zero is not below this bound:
-// it is the ambient target, which releases the chamber.
-GARDENER_KNOB_VALID(float, ControlMinTargetKpa, GARDENER_CONTROL_MIN_TARGET_KPA, 5.0f,
-                    GARDENER_CONTROL_MIN_TARGET_KPA > 0.0f &&
-                        GARDENER_CONTROL_MIN_TARGET_KPA <= 100.0f,
-                    "the sensor reads to 100 kPa below ambient");
 
 // --- The rig's own numbers ---------------------------------------------------
 // What a different pump, chamber or valve changes. These are facts about the build rather than
@@ -39,9 +30,8 @@ GARDENER_KNOB_VALID(float, PumpFlowLpm, GARDENER_PUMP_FLOW_LPM, 1.0f, GARDENER_P
 GARDENER_KNOB_VALID(float, ChamberVolumeL, GARDENER_CHAMBER_VOLUME_L, 0.05f,
                     GARDENER_CHAMBER_VOLUME_L > 0.0f, "ChamberVolumeL must be positive, in litres");
 GARDENER_KNOB_VALID(float, ControlFloorKpa, GARDENER_CONTROL_FLOOR_KPA, 60.0f,
-                    GARDENER_CONTROL_FLOOR_KPA >= GARDENER_CONTROL_MIN_TARGET_KPA &&
-                        GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
-                    "the floor must admit a target and stay inside the sensor's range");
+                    GARDENER_CONTROL_FLOOR_KPA > 0.0f && GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
+                    "the floor stays inside the sensor's range");
 GARDENER_KNOB_VALID(float, PumpDutyMaxPercent, GARDENER_PUMP_DUTY_MAX_PERCENT, 90.0f,
                     GARDENER_PUMP_DUTY_MAX_PERCENT > 0.0f &&
                         GARDENER_PUMP_DUTY_MAX_PERCENT <= 100.0f,
@@ -59,17 +49,6 @@ GARDENER_KNOB_VALID(bool, ValveNormallyOpen, GARDENER_VALVE_NORMALLY_OPEN, true,
 GARDENER_KNOB_VALID(uint32_t, ControlMaxRunMs, GARDENER_CONTROL_MAX_RUN_MS, 7200000,
                     GARDENER_CONTROL_MAX_RUN_MS >= 1000 && GARDENER_CONTROL_MAX_RUN_MS <= 86400000,
                     "a run is bounded by a day");
-
-// The hold a start is granted: the device's stored maximum, held to the machine's ceiling, or the
-// ceiling itself when the document names none. Every path that starts a run asks this, so the
-// document bounds a start from the wire and from a page alike, and a document edited past the
-// ceiling cannot promise a run the machine would cut short.
-inline uint32_t maxRunSeconds(int32_t storedSeconds) {
-  const uint32_t ceiling = ControlMaxRunMs / 1000;
-  if (storedSeconds <= 0) return ceiling;
-  const uint32_t stored = static_cast<uint32_t>(storedSeconds);
-  return stored < ceiling ? stored : ceiling;
-}
 
 // --- PID configuration from the pump and the chamber ------------------------
 // The loop's shape, rig-independent: the proportional correction time, the derivative's damping
@@ -142,13 +121,7 @@ GARDENER_KNOB_VALID(bool, ControlVentToTarget, GARDENER_CONTROL_VENT_TO_TARGET, 
 GARDENER_KNOB_VALID(float, VentTargetLeadKpa, GARDENER_VENT_TARGET_LEAD_KPA, 1.0f,
                     GARDENER_VENT_TARGET_LEAD_KPA >= 0.0f,
                     "how far deeper than the target the valve closes, in kPa");
-// A reset releases the chamber first, but it does not wait out the whole vent: the restart is safe
-// once the pump is off and the valve is open, and this is the margin a near-vented chamber gets.
-GARDENER_KNOB_VALID(uint32_t, RebootVentWaitMs, GARDENER_REBOOT_VENT_WAIT_MS, 2000,
-                    GARDENER_REBOOT_VENT_WAIT_MS >= 0,
-                    "the wait before a reset restarts the machine, in milliseconds");
-
-// --- The loop's own faults ---------------------------------------------------
+// The loop's own faults ---------------------------------------------------
 // A pull driven hard against a blocked hose or a stuck sensor moves nothing, and a depth that runs
 // past its target is the loop not holding what it was asked to. Both are the machine's to notice,
 // because a controller that has stopped talking is exactly when they matter.
@@ -178,21 +151,9 @@ struct MachinePins {
   uint8_t ventValve;
 };
 
-// The optional assemblies a composition root fitted, one byte on both links so a host gets the same
-// answer whichever transport it uses. The sketch ORs the bits it built and the machine holds the
-// byte. There is no bit for stopping when a link leaves: no build does that.
-enum Capability : uint8_t {
-  PanelFitted = 0x01,    // a panel (and with it keys, pages and the VM) is fitted
-  BatteryFitted = 0x02,  // a battery gauge is fitted; a wired-only device has none
-  // The fitted valve fails safe: de-energised means vented, so the chamber cannot hold pressure
-  // through a crash, a cut wire or a dead coil. A normally-closed part inverts that.
-  FailSafeValve = 0x04,
-};
-
-// The machine: the pressure loop and the policy around it, with no panel part named. It commands
-// the three parts it is handed and holds the capability byte, and it reports through the logger it
-// was built with. boot() brings the parts up; the parts themselves, the links and the tasks stay the
-// composition's.
+// The machine: the pressure loop and the policy around it. It commands the three parts it is
+// handed and reports through the logger it was built with. boot() brings the parts up; the parts
+// themselves, the link and the tasks stay the composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
@@ -202,21 +163,16 @@ class Machine {
   Machine(const Machine&) = delete;
   Machine& operator=(const Machine&) = delete;
 
-  // The parts come up and say whether they answered. The links and the tasks are the
-  // composition's, so this is the whole of what the machine starts.
+  // The parts come up and say whether they answered. The link and the tasks are the composition's,
+  // so this is the whole of what the machine starts.
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }
-  const VacuumSystem& vacuum() const { return vacuum_; }
-  uint8_t capabilities() const { return capabilities_; }
-  void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }
-  uint32_t uptimeMs() const { return millis(); }
 
  private:
   Logger& logger_;
   VacuumSystem vacuum_;
-  uint8_t capabilities_ = 0;
 };
 
 }  // namespace gardener

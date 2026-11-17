@@ -5,6 +5,10 @@ the PC's USB port with a small pump; the 12 V build is the same machine on a ben
 deeper pump. Pick one before buying: they share most of the parts, and each build lists what it
 needs.
 
+The firmware drives the pump, the pressure sensor and the vent valve, over one serial line. The
+panel, the keys, the buzzer and the battery gauge are listed because the rig has places for them;
+no build reads or paints them as it stands.
+
 **5 V build: ≈ $108. 12 V build: ≈ $170.** The 12 V pump, the 12 V supply and the two
 bucks are estimates; the rest are listed.
 
@@ -21,8 +25,8 @@ attended.
 | 2 | JQB2438 pump | Micro diaphragm vacuum pump, 3 V/3.7 V winding, 0.45 A | **$16.84** — [B0GR4K9K4P](https://www.amazon.com/dp/B0GR4K9K4P) |
 | 3 | Solenoid valve | Mini 2-way **normally open**, 3.0–5.0 V, ~180 mA at 3.3 V. Ports 1 and 2 in use; port 3 capped | **$9.63** — [B0HDRX4C44](https://www.amazon.com/dp/B0HDRX4C44) |
 | 4 | **XGZP6847A sensor** | CFSensor XGZP6847A100KPGN33: -100–0 kPa gauge, 3.3 V, amplified analog 0.2–2.7 V out, 6-DIP, 3 mm barbless top port. Pre-calibrated, so no bridge ADC; it takes one ADC pin rather than the I2C bus | **$5.25** — [DigiKey](https://www.digikey.com/en/products/detail/cfsensor/XGZP6847A100KPGN33/22530823) |
-| 5 | **OLED** | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. On its own bus. The controller's map is [the SH1106 reference](../reference/sh1106-i2c.md) | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
-| 6 | **Six keys + 74HC165** | Six labelled momentary switches — up, down, forward, back, okay, cancel — into an 8-bit parallel-in/serial-out shift register. Three GPIOs instead of six; the two spare register inputs are tied high | **≈ $5** — any 74HC165 and six 6 mm tactile switches |
+| 5 | **OLED** (not driven) | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. On its own bus. The firmware drives no display as it stands | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
+| 6 | **Six keys + 74HC165** (not driven) | Six labelled momentary switches — up, down, forward, back, okay, cancel — into an 8-bit parallel-in/serial-out shift register. Three GPIOs instead of six; the two spare register inputs are tied high. The firmware reads no keys as it stands | **≈ $5** — any 74HC165 and six 6 mm tactile switches |
 | 7 | **DRV8833 module** | Dual H-bridge, 2 × 1.5 A, logic-level inputs. Drives the pump and the valve | **$6.99** — [B0G1RMXMSF](https://www.amazon.com/dp/B0G1RMXMSF) |
 | 8 | **Breadboard + jumpers** | 2 × 830-point board with a wire kit | **$9.99** — [B0H17GR4S5](https://www.amazon.com/dp/B0H17GR4S5) |
 | 9 | **Bulk capacitor** | 1000 µF 25 V electrolytic, across the 3.3 V load rail | **$6.99** — [B0F8C1VMT6](https://www.amazon.com/dp/B0F8C1VMT6) |
@@ -39,7 +43,7 @@ few cents if they are not, and neither is in the total.
 ### Wiring
 
 ```
-PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + GND   (OUT → GPIO7)
+PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + GND   (OUT → GPIO5)
 (via USB-C) │                               ├─ OLED       SDA + SCL   (Wire1, 17/18)
             │                               └─ keys       74HC165 (SH/LD, CLK, Q7)
             └─ 3.3 V buck ── DRV8833 VM ─┬─ channel A ── pump
@@ -49,14 +53,14 @@ PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + 
 ```
 
 ```
-GPIO  7               ADC     XGZP6847A OUT (ADC1 channel 6)
+GPIO  5               ADC     XGZP6847A OUT (ADC1 channel 4)
 GPIO 17 18            I2C     panel 0x3C (Wire1)
-GPIO  6               pump
-GPIO  5               valve
+GPIO  8               pump
+GPIO  9               valve
 GPIO 10 11  1         keys: 74HC165 SH/LD, CLK, Q7 (six keys)
 GPIO  4               battery sense (reserved)
 GPIO 12               buzzer (passive piezo)
-GPIO  2  8  9 13 14 15 16   spare
+GPIO  2  6  7 13 14 15 16   spare
 ```
 
 The sensor is a bare 6-DIP: pin 1 is N/C, pins 2 and 4 are VDD, pins 3 and 6 are GND, and pin 5
@@ -130,7 +134,7 @@ board decision and not part of the 5 V build.
 The same machine on a bench supply. The MCU, sensor, panel, buttons, valve and firmware are the
 5 V build's; the pump, its drive, the supply and the two bucks are different. The firmware does
 not know which pump it is driving: `PwmPump` owns one LEDC channel at 20 kHz and the low-side
-switch does the rest, so GPIO6 and the duty mean the same thing on either rail.
+switch does the rest, so GPIO8 and the duty mean the same thing on either rail.
 
 ### What differs
 
@@ -187,7 +191,7 @@ A 6 mm barb needs a short length of 4 mm ID tube and a 4 mm-to-2.4 mm reducer: t
                        │                          │
                        │                      [ MOSFET ] ── SOURCE ── GND
                        │                          │
-                       │        GPIO6 ── 100R ── GATE
+                       │        GPIO8 ── 100R ── GATE
                        │                  10k ── GND
                        │
                        ├── 12 V → 3.3 V buck ── DRV8833 VM ── valve (channel B)
@@ -198,9 +202,9 @@ A 6 mm barb needs a short length of 4 mm ID tube and a 4 mm-to-2.4 mm reducer: t
    PSU -, both bucks' -, MOSFET source, DRV8833 GND, MCU GND
 ```
 
-The pin map is the 5 V build's: GPIO6 is the pump PWM, GPIO5 is the valve, and the sensor, panel,
+The pin map is the 5 V build's: GPIO8 is the pump PWM, GPIO9 is the valve, and the sensor, panel,
 buttons and buzzer do not move. It is the sketch's `Board` block, so a variant of the rig is that
-block and nothing in the libraries. The DRV8833 drives only the valve — `BIN1` from GPIO5, `BIN2` and
+block and nothing in the libraries. The DRV8833 drives only the valve — `BIN1` from GPIO9, `BIN2` and
 both `AIN` inputs to GND — with its `VM` on the 3.3 V rail, so the coil sees the same voltage as
 the 5 V build and its body diodes are the coil's flyback path. The pump's diode and capacitor are
 at the pump, not at the FET: the capacitor is the surge reservoir and the diode is the winding's

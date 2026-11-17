@@ -3,118 +3,62 @@
 #include <Arduino.h>
 
 #include "core/Knob.h"
-#include "machine/CommandQueue.h"
-#include "machine/MachineCommand.h"
-#include "serial/BoardFacts.h"
 
 namespace gardener {
-class Battery;
-class Library;
 class Logger;
-class Machine;
-class DeviceSettings;
-class GestureQueue;
+class SystemControl;
 
-class BuzzerPlayer;
-
-// The longest command line a grammar serves: the link refuses a longer one, and so does each grammar
-// handed one. A command body, when a grammar defines one, is not bounded here.
+// The longest command line the link serves: a longer one is refused and its remainder dropped.
 GARDENER_KNOB_VALID(uint16_t, CommandLineMax, GARDENER_SERIAL_COMMAND_LINE_MAX, 128,
                     GARDENER_SERIAL_COMMAND_LINE_MAX >= 32 &&
                         GARDENER_SERIAL_COMMAND_LINE_MAX <= 1024,
                     "a line the link can hold, in bytes");
 
-// The wire revision this link serves, reported as `proto` by `device get`. The wire is still
-// unsettled, so the number stays 1 and does not move per revision; a controller must not treat it
-// as a compatibility guarantee.
-GARDENER_KNOB_VALID(uint32_t, ProtocolVersion, GARDENER_SERIAL_PROTOCOL_VERSION, 1,
-                    GARDENER_SERIAL_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
-
-// Everything the wire answers from: the machine, the board's own facts, and the panel's parts — the
-// gauge, the document, the piezo, the store the files ride on and the queue a gesture goes to. The
-// sketch builds it; the link names no part of its own.
-struct SerialParts {
-  Machine& machine;
-  const BoardFacts& board;
-  const Battery& battery;
-  DeviceSettings& settings;
-  BuzzerPlayer& buzzer;
-  Library& files;
-  GestureQueue& presses;
-};
-
-// The serial interface to the controller. It reads the first token of each line and hands the rest of
-// the line, body included, to that token's grammar: `vacuum`, `device`, `buzzer`, `fs` and
-// `gesture`, one file each beside this one. A token nothing serves is answered as an unknown domain,
-// and the link owns only its own errors and diagnostics.
+// The serial interface to the controller. It reads a line to its LF and hands the line, trimmed and
+// bounded, to the machine's grammar, which parses the verb and its argument and formats the reply. A
+// verb nothing serves is answered as an unknown verb, and the link owns only its own errors and
+// diagnostics.
+//
+// Its whole power over the device is the control it is handed: the grammar parses a line and formats
+// a reply, and every decision behind them is the control's, so no link can queue a sequence of its
+// own.
 class SerialLink {
  public:
   // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
-             SerialParts parts);
+  SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control);
 
   void begin();
   void poll(uint32_t nowMs);
 
+ private:
   bool controllerAttached() const;
 
- private:
-  // The port as a grammar sees it: the bytes the link reads, with a CR the LF follows taken off. The
-  // port's terminator is LF alone, so "\r\n" ends a line the way "\n" does and no grammar has to
-  // know which one the host wrote.
-  class Port : public Stream {
-   public:
-    explicit Port(Stream& port) : port_(port) {}
-
-    int available() override { return port_.available(); }
-    // One byte of lookahead, so the CR is dropped only when the LF is already behind it.
-    int read() override {
-      int value = port_.read();
-      if (value == '\r' && port_.peek() == '\n') value = port_.read();
-      return value;
-    }
-    int peek() override { return port_.peek(); }
-    void flush() override { port_.flush(); }
-    size_t write(uint8_t byte) override { return port_.write(byte); }
-    size_t write(const uint8_t* buffer, size_t size) override { return port_.write(buffer, size); }
-
-   private:
-    Stream& port_;
-  };
-
-  // The grammars this link serves, resolved from a line's first token by the one list in
-  // `grammarFor`.
-  enum class Grammar : uint8_t { None, Vacuum, Device, Buzzer, Files, Gesture };
-
-  // The grammar `token` names, which must already be lowercase.
-  Grammar grammarFor(const String& token) const;
-  // Hands the stream to the grammar named by `token`. False when there is no such grammar, in which
-  // case the caller discards the rest of the line.
-  bool dispatch(const String& token);
-  // Each grammar: the rest of the line, and any body, is read from the stream it is handed.
-  void executeVacuum(Stream& io);
-  void executeDevice(Stream& io);
-  void executeBuzzer(Stream& io);
-  void executeFiles(Stream& io);
-  void executeGesture(Stream& io);
-  // The dispatcher's own errors: an unknown domain, or a header it could not accept.
+  // The machine's commands: one line, already trimmed and bounded, parsed into a verb and its
+  // argument.
+  void execute(Stream& io, const String& line);
+  // The status line: the fields `get` answers with, which the heartbeat repeats. It goes out in one
+  // write, because the S3's USB CDC drops a write of its own when its ring is busy and a line built
+  // from twenty of them loses whichever ones lost the race.
+  void writeStatus(Stream& io, const char* prefix) const;
+  // The unsolicited status line, one per HeartbeatPeriodMs of the link's own clock.
+  void heartbeat(uint32_t nowMs);
+  // The link's own errors: an unknown verb, or a line it could not accept.
   void linkError(const char* code, const String& detail);
 
-  CommandQueue& queue_;
   Stream& stream_;
-  // The stream the grammars read and answer on: `stream_` with the line ending's CR taken off.
-  Port port_;
   PresenceFn present_;
   Logger& logger_;
-  SerialParts parts_;
-  // The domain token being assembled. It never holds a command or a body.
+  SystemControl& control_;
+  // The line being assembled, without its LF.
   String buffer_;
-  // The rest of a line that was already answered, or a comment, is being thrown away.
-  bool swallowing_ = false;
+  // Set when a line outgrew CommandLineMax: the rest of it is dropped and it is answered once.
+  bool overlong_ = false;
   bool attached_ = false;
+  // When the heartbeat last went out, in millis.
+  uint32_t lastHeartbeatMs_ = 0;
 };
 
 }  // namespace gardener

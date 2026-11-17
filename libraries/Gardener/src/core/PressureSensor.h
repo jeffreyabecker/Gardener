@@ -8,7 +8,7 @@ namespace gardener {
 //
 // This is the interface the vacuum system holds. The part on this rig — a CFSensor XGZP6847A, whose
 // amplified analog output is read by an ADC pin and averaged before it is filtered — is in
-// hal/impl/.
+// core/hal/.
 //
 // `pressureKpa` is the vacuum depth: zero at ambient and rising as the chamber is pulled down. The part
 // takes its own reference when it comes up, in begin(), so the depth is measured below whatever

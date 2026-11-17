@@ -10,9 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "core/Battery.h"
-#include "core/ButtonPanel.h"
-#include "core/Buzzer.h"
 #include "core/Logger.h"
 #include "core/PressureSensor.h"
 #include "core/Pump.h"
@@ -34,28 +31,16 @@ class FakePump : public Pump {
     note("pump.duty");
   }
   void stop() override {
-    stopped_ = true;
-    halted_ = false;
     duty_ = 0.0f;
     note("pump.stop");
   }
   void halt() override {
-    halted_ = true;
-    stopped_ = false;
     duty_ = 0.0f;
     note("pump.halt");
   }
   float dutyPercent() const override { return duty_; }
 
-  void clear() {
-    stopped_ = false;
-    halted_ = false;
-    duty_ = 0.0f;
-  }
-
   float duty() const { return duty_; }
-  bool stopped() const { return stopped_; }
-  bool halted() const { return halted_; }
 
  private:
   void note(const char* what) {
@@ -64,8 +49,6 @@ class FakePump : public Pump {
 
   std::vector<std::string>* events_;
   float duty_ = 0.0f;
-  bool stopped_ = false;
-  bool halted_ = false;
 };
 
 // The sensor: a depth a case sets, and flags for the two ways it goes quiet.
@@ -89,11 +72,6 @@ class FakeSensor : public PressureSensor {
     present_ = false;
     valid_ = false;
   }
-  // The part answers but has no filtered sample yet.
-  void warmUp() {
-    present_ = true;
-    valid_ = false;
-  }
 
  private:
   float kpa_ = 0.0f;
@@ -110,15 +88,12 @@ class FakeValve : public VentValve {
   void begin() override {}
   void open() override {
     vents_ = true;
-    energised_ = energiseWhenOpen_;
     note("valve.open");
   }
   void close() override {
     vents_ = false;
-    energised_ = !energiseWhenOpen_;
     note("valve.close");
   }
-  bool energised() const override { return energised_; }
   bool energiseWhenOpen() const override { return energiseWhenOpen_; }
 
   bool vents() const { return vents_; }
@@ -131,91 +106,13 @@ class FakeValve : public VentValve {
   bool energiseWhenOpen_;
   std::vector<std::string>* events_;
   bool vents_ = false;
-  bool energised_ = false;
-};
-
-// The piezo: the level it is actually driving, which a case reads back.
-class FakeBuzzer : public Buzzer {
- public:
-  bool begin() override { return true; }
-  void tone(uint16_t hz) override {
-    hz_ = hz;
-    sounding_ = hz != 0;
-  }
-  void off() override {
-    hz_ = 0;
-    sounding_ = false;
-  }
-  bool sounding() const override { return sounding_; }
-  uint16_t frequencyHz() const override { return hz_; }
-
- private:
-  uint16_t hz_ = 0;
-  bool sounding_ = false;
-};
-
-// The pack gauge: the reading a case sets and the beat it was last updated on.
-class FakeBattery : public Battery {
- public:
-  bool begin() override { return true; }
-  void update(uint32_t nowMs) override {
-    lastUpdateMs_ = nowMs;
-    updates_++;
-  }
-  bool present() const override { return present_; }
-  bool low() const override { return low_; }
-  float volts() const override { return volts_; }
-  uint8_t percent() const override { return percent_; }
-
-  void setPresent(bool present) { present_ = present; }
-  void setLow(bool low) { low_ = low; }
-  void setPercent(uint8_t percent) { percent_ = percent; }
-  uint32_t lastUpdateMs() const { return lastUpdateMs_; }
-  int updates() const { return updates_; }
-
- private:
-  bool present_ = true;
-  bool low_ = false;
-  float volts_ = 3.7f;
-  uint8_t percent_ = 50;
-  uint32_t lastUpdateMs_ = 0;
-  int updates_ = 0;
-};
-
-// The panel keys: the level, the press and the hold a case sets, keyed by the hal enum.
-class FakeButtonPanel : public ButtonPanel {
- public:
-  bool pressed(Button button) override { return pressed_[index(button)]; }
-  Press consumePress(Button button) override {
-    const Press press = press_[index(button)];
-    press_[index(button)] = Press::None;
-    return press;
-  }
-  void dropPress(Button button) override { press_[index(button)] = Press::None; }
-  uint32_t heldMs(Button button) override { return heldMs_[index(button)]; }
-
-  // A key coming down and going up, as the classifier sees it across two beats.
-  void press(Button button) { pressed_[index(button)] = true; }
-  void release(Button button) { pressed_[index(button)] = false; }
-  void classify(Button button, Press press) { press_[index(button)] = press; }
-  void hold(Button button, uint32_t ms) { heldMs_[index(button)] = ms; }
-
- private:
-  static size_t index(Button button) { return static_cast<size_t>((uint8_t)button); }
-
-  bool pressed_[ButtonCount] = {};
-  Press press_[ButtonCount] = {};
-  uint32_t heldMs_[ButtonCount] = {};
 };
 
 // The one sink: every line a domain logs, in order, with the level it came in at.
 class RecordingLogger : public Logger {
  public:
-  String levels() const override { return levels_; }
-  void setLevels(const String& levels) override { levels_ = levels; }
   void info(const char* text) override { log('I', text); }
   void warn(const char* text) override { log('W', text); }
-  void error(const char* text) override { log('E', text); }
 
   // Whether any line so far contains `text`.
   bool saw(const char* text) const {
@@ -226,7 +123,6 @@ class RecordingLogger : public Logger {
   }
 
   const std::vector<std::string>& lines() const { return lines_; }
-  void clear() { lines_.clear(); }
 
  private:
   void log(char level, const char* text) {
@@ -237,7 +133,6 @@ class RecordingLogger : public Logger {
     lines_.push_back(line);
   }
 
-  String levels_ = "IWE";
   std::vector<std::string> lines_;
 };
 

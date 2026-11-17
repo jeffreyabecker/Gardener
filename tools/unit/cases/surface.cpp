@@ -22,12 +22,12 @@ TEST_CASE("a text grown past its first allocation keeps its bytes") {
   CHECK(text.endsWith("0123456789"));
 }
 
-TEST_CASE("a stream hands a domain the text typed and holds what it printed") {
+TEST_CASE("a stream hands the link the text typed and holds what it printed") {
   TextStream io;
-  io.type("vacuum get\n");
-  CHECK(io.available() == 11);
-  CHECK(io.read() == 'v');
-  CHECK(io.peek() == 'a');
+  io.type("get\n");
+  CHECK(io.available() == 4);
+  CHECK(io.read() == 'g');
+  CHECK(io.peek() == 'e');
   io.clearPrinted();
   io.print("ok state=IDLE\n");
   CHECK(io.printed() == std::string("ok state=IDLE\n"));

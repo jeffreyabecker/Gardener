@@ -8,159 +8,47 @@ dropped and the reason is in git.
 
 ## Second pump/sensor/solenoid combo
 
-Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. The machine
-context, the `vacuum` wire commands and the alpha PCB all assume one combo today.
-
-## Firmware size
-
-Measured on 2026-10-19 with `--task build`: 566,997 bytes, 43% of the 1,310,720-byte app slot. An
-empty sketch with the same FQBN is 298,069 bytes (22%). Two levers were identified and not taken.
-
-### Revisit the partition scheme
-
-Pin `huge_app` instead of `default` in [scripts/arduino.py](../scripts/arduino.py): one 3 MB
-app slot and 896 KB of LittleFS reports ~18% instead of 43%. The OTA slot it drops is unused, and
-the data image has to be uploaded again because the offset moves.
-
-### Try `-fno-exceptions`
-
-The image carries 36 KB of exception metadata, about 17 KB of it in objects this build compiles.
-Nothing throws today, but any vendored C++ added later would have to make the same choice.
+Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. The machine,
+the `vacuum` wire commands and the alpha PCB all assume one combo today.
 
 ## The board's own free heap
 
-The Berry check reports the interpreter's heap as the host bills it, which is an upper bound rather
-than the board's figure. What the device actually has free, and how low a run takes it, is a number
-only the board can answer. Blocked by: the serial protocol has no field for it, and nothing has
-decided whether one belongs there.
-
-## Loading routines on demand
-
-Compile a routine when it is pushed rather than at boot, so only the active page's compiled form
-bills the heap — about 25 KB on the board. Blocked by: the browser lists routines from the registry,
-so an un-loaded routine has no row, and nothing has decided whether that is acceptable.
-
-## One file to flash
-
-A `--task release` that packs [firmware/data](../firmware/data) into the build's
-`gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
-`--task upload` and then `--task data`. What holds it back is that the image would ship whatever
-`settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.
-
-
-
-## Verify the device on hardware
-
-The machine/panel split has only ever been compiled. Everything the specs now promise still needs a
-device: the serial surface with writes accepted from any link, `device get` reporting
-the gauge and the unit beside the machine's fields, the panel's page and routine live whatever else
-is connected, and Back+OK rebooting.
+What the device actually has free, and how low a run takes it, is a number only the board can
+answer, and `ESP.getFreeHeap()`, `getMaxAllocHeap()` and `getMinFreeHeap()` are all there to report
+it. Blocked by: the serial protocol has no field for it, and nothing has decided whether one belongs
+there.
 
 ## Thermal and continuous-duty protection
 
-`pump_max` is a duty cap, not a thermal limit: a long hold at the top of the range can overheat the
-pump. A maximum continuous run, a derating curve, or a current or temperature sense would cover it.
-Blocked by: nothing on the rig senses temperature or pump current, and neither pump has a measured
-continuous-duty figure to set a body-safe default from. A single hold is now bounded at fifteen
-minutes, which is the whole of the protection there is.
+`PumpDutyMaxPercent` is a duty cap, not a thermal limit: a long hold at the top of the range can
+overheat the pump. A maximum continuous run, a derating curve, or a current or temperature sense
+would cover it. Blocked by: nothing on the rig senses temperature or pump current, and neither pump
+has a measured continuous-duty figure to set a body-safe default from. The two-hour ceiling on a run
+is the whole of the protection there is.
 
 ## Low-battery start refusal
 
 `startRefusal()` should answer `low_battery` when a gauge is fitted and the pack is below a
 threshold, so a brownout is refused rather than survived. Blocked by: no pack fitted to the device
-yet — the alpha PCB leaves the divider deferred until a Super Mini variant with one is chosen.
+yet, so there is no gauge to read — the alpha PCB leaves the divider deferred until a Super Mini
+variant with one is chosen.
 
 ## A local event log
 
-The last N commands, stops, transitions and faults kept in NVS and readable over the serial
-line, so an incident can be understood after the fact. Blocked by:
-nothing decided about where it lives, how it is bounded, or what reads it back.
+The last N commands, stops, transitions and faults kept in NVS and readable over the serial line, so
+an incident can be understood after the fact. Blocked by: nothing decided about where it lives, how
+it is bounded, or what reads it back.
 
-## An overlay that adapts to the panel
+## Verify the device on hardware
 
-The page area above the overlay reflows to the panel's size, but the overlay is still a fixed 12
-rows. Blocked by: nothing decided about whether the overlay should scale with the panel or stay
-sized to its own contents.
-
-## The overlay as cells the panel hands out
-
-`page::Overlay` reads the unit, the link, the run state and the gauge itself and builds the
-overlay's four paints in a fixed order, so what the overlay shows is decided in one paint and a
-device with no gauge still contributes a cell that draws only the absence. Each cell
-could be an object the panel context returns — the unit, the link, the run state, the gauge —
-drawn in the order it is given them, so a fitted part adds its cell and a missing one is not there
-at all. Blocked by: the strip is one paint rather than a set of parts, so the container, the order
-and which side re-reads the machine each frame are all undecided.
-
-## Berry drawing through a canvas
-
-Every `.be` page draws through the flat `screen` verbs onto the one full-page canvas the panel owns,
-so a component's drawing is only inside its box by discipline and there is nowhere for a window over
-the page to draw. A canvas over an extent, handed to a scene or a window, would clip each one to its
-own box and let a window compose over what is under it. Blocked by: nothing in the scene stack is a
-window — every scene takes the whole page — and `screen` is a published surface, so the extent, the
-buffer and the flush order a canvas would need are all undecided.
-
-## The canvas as a property of the display
-
-`PanelContext::canvas()` has to be there because a `Canvas` owns the rectangle of pixels written
-since the last flush and `DisplayDevice::rootCanvas()` builds a fresh one on every call: the panel
-holds the one root and hands out a reference to it. If the device held its root canvas and answered
-with a reference, `canvas()` could leave the context and both headers would describe what actually
-happens.
-Blocked by: a canvas needs the buffer, the geometry and the depth, which are virtual and exist only
-once the driver is up, so a base-class member cannot be built in the constructor; and `Canvas` is
-neither copyable nor movable, so a getter cannot hand one out by value or keep one without an
-`optional` or a member the driver owns.
-
-## Pre-calculating the editor pages' layout
-
-The editor pages build their paint tree on every draw, and the glass and the three band shares are
-known, so the boxes could in principle be worked out once and written as numbers in each scene, or
-the built tree could be kept between draws. Measured on 2026-11-01 by driving the real scenes into a
-recording display on the host, on a 128x52 page: a number page is 32.6 µs and 13 allocations a draw
-against 28.8 µs and none when its tree is built once and drawn again; a twenty-entry choice page is
-99.2 µs and 24 allocations against 91.9 µs; the number page drawn from placements worked out once is
-26.2 µs and no allocations; and an extra canvas level costs under half a microsecond, so the deepest
-cell in a hint band is a couple of microseconds of a draw. The sizes are six or so values between 16
-and 80 bytes, so the churn is the same bins over and over, at the four draws a second the repaint
-cadence asks for. Building the tree is therefore a tenth of a draw and the allocations are not a
-fragmentation risk, which is why neither form was taken. What a hard-coded page would give up is the
-fitting — the cut and scale a band's height and a string's measured width choose — the inversion of a
-whole cell, the row windows the lists compute from the band they land in, and the one vocabulary the
-`.be` pages draw through.
-
-## The stored default target
-
-`[device] target` is read into `SystemState::deviceTargetKpa` when the document loads, and
-`vacuum.set_target_pressure` writes it through `DeviceSettings::setTargetKpa()`. Nothing reads it
-back — the Berry getter that did (`device.target`) and the three lines in `home.be` that applied it
-are gone — and no set saves it: the document reaches the flash only when a unit write beside it
-saves, which is the serial and wire `device set` path. Blocked by: nothing has decided whether a page
-should be given the stored depth again, whether a target a page sets should save where it is set, or
-whether the key and the published field should go now that the setter is what moves them.
+The serial-only device has only ever been compiled. Everything it promises still needs a board: a
+set that pulls to its depth and holds, a vent that reaches the floor, a run that releases when its
+deadline expires, a fault that latches and a reset that clears it, and the valve venting when the
+coil is not held.
 
 ## One file to compile
 
 A task in [scripts/arduino.py](../scripts/arduino.py) that keeps a verbose build's compile command
 and replays it with `-fsyntax-only` for one file, so a library change is checked in seconds rather
-than by a whole build. Blocked by: nothing has decided whether the core library's host test suite
-answers the same question for the source it compiles, which would leave the task unused.
-
-## A battery that is not fitted
-
-The panel build sets BatteryFitted whatever the assembled board carries, so a machine with no gauge
-still reports one. Blocked by: nothing has decided whether that is a build option or a run-time flag.
-
-## An allocator that fails on demand
-
-`be_newcomobj` stores the object it is handed only if its own allocation succeeds, and frees nothing
-when it does not, so an owner or a scene is dropped silently at the moment memory is already short. A
-host build whose allocator fails a chosen allocation would show that and every other path that hands
-ownership over in an argument list. Blocked by: nothing builds one.
-
-
-# Make the serial link report the VM usage 
- ESP.getFreeHeap()
- ESP.getMaxAllocHeap()
- ESP.getMinFreeHeap()
+than by a whole build. Blocked by: nothing has decided whether the host suite answers the same
+question for the source it compiles, which would leave the task unused.

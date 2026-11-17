@@ -1,6 +1,6 @@
 // The control tick: what one beat applies from the queue, how a burst collapses to what the machine
-// should do rather than replaying every write, the reboot the composition takes back, and the run
-// log. The tick is shaped to be reached by a case, so it is driven here with a clock the case owns.
+// should do rather than replaying every write, and the run log. The tick is shaped to be reached by
+// a case, so it is driven here with a clock the case owns.
 
 #include <doctest.h>
 
@@ -9,7 +9,6 @@
 
 #include "Clock.h"
 #include "beats/MachineTick.h"
-#include "core/SystemState.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
@@ -21,7 +20,6 @@ using gardener::CommandQueue;
 using gardener::MachineCommand;
 using gardener::MachineTick;
 using gardener::RunState;
-using gardener::SystemState;
 using gardener::VacuumSystem;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
@@ -55,10 +53,9 @@ class BoundedQueue : public CommandQueue {
   std::vector<MachineCommand> commands_;
 };
 
-// The machine a tick drives: the three fakes, the loop over them, the queue, the log, and the state
-// the tick publishes its slice into.
+// The machine a tick drives: the three fakes, the loop over them, the queue and the log.
 struct Rig {
-  Rig() : tick(system, logger, queue, published) {
+  Rig() : tick(system, logger, queue) {
     gardener::host::reset();
     sensor.read(20.0f);
     system.begin();
@@ -69,7 +66,6 @@ struct Rig {
   FakeValve valve;
   VacuumSystem system{&pump, &sensor, &valve};
   RecordingLogger logger;
-  SystemState published;
   BoundedQueue queue;
   MachineTick tick;
 };
@@ -94,26 +90,17 @@ TEST_CASE("a queued command reaches the machine on the next tick") {
   CHECK_EQ(rig.system.targetPressureKpa(), 20.0f);
 }
 
-// The beat's own publication: what the panel draws and what a page's read answers is this slice.
-TEST_CASE("a tick publishes the machine's slice") {
+// The beat's own effect: what the panel used to draw is what the run log says, and the machine's
+// state after the tick is the state the queue asked for.
+TEST_CASE("a start in a beat puts the machine in the run it was asked for") {
   Rig rig;
   REQUIRE(rig.queue.post(target(40.0f)));
   REQUIRE(rig.queue.post(op(Op::Start)));
   rig.tick.tick(0);
 
-  CHECK_EQ(rig.published.targetPressureKpa, 40.0f);
-  CHECK_EQ(rig.published.currentPressureKpa, 20.0f);
-  CHECK(rig.published.runState == RunState::Pulling);
-  CHECK(rig.published.running);
-  CHECK(rig.published.canStart);
-}
-
-TEST_CASE("a start a page would be refused for is published that way") {
-  Rig rig;
-  rig.sensor.detach();
-  rig.tick.tick(0);
-
-  CHECK_FALSE(rig.published.canStart);
+  CHECK_EQ(rig.system.targetPressureKpa(), 40.0f);
+  CHECK(rig.system.runState() == RunState::Pulling);
+  CHECK(rig.system.running());
 }
 
 TEST_CASE("a stop in a burst discards the targets before it") {
@@ -132,16 +119,6 @@ TEST_CASE("repeated targets reduce to the last one") {
   rig.tick.tick(0);
   CHECK_EQ(rig.system.targetPressureKpa(), 25.0f);
   CHECK(rig.logger.saw("dropped target 10.0 for a later target"));
-}
-
-TEST_CASE("a reboot is handed back rather than applied") {
-  Rig rig;
-  const RunState before = rig.system.runState();
-  REQUIRE(rig.queue.post(op(Op::Reboot)));
-  rig.tick.tick(0);
-  CHECK(rig.tick.takeReboot());
-  CHECK_FALSE(rig.tick.takeReboot());
-  CHECK_EQ(rig.system.runState(), before);
 }
 
 TEST_CASE("the run log names a state change once") {

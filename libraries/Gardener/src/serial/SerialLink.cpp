@@ -3,24 +3,29 @@
 #include "core/Logger.h"
 
 namespace gardener {
+namespace {
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
-                       SerialParts parts)
-    : queue_(queue), stream_(stream), port_(stream), present_(present), logger_(logger),
-      parts_(parts) {}
+// A heartbeat every five seconds: often enough that a controller sees the machine is alive and what
+// it is doing, rarely enough that it stays out of the way of a command's reply.
+constexpr uint32_t HeartbeatPeriodMs = 5000;
+
+}  // namespace
+
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control)
+    : stream_(stream), present_(present), logger_(logger), control_(control) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
   buffer_ = "";
-  swallowing_ = false;
+  overlong_ = false;
   logger_.info("serial: interface ready");
 }
 
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
 
 // --- replies ---------------------------------------------------------------
-// The link writes only its own errors and diagnostics. A grammar formats its reply through the
-// stream it is handed.
+// The link writes its own errors and diagnostics; a grammar formats its reply through the stream it
+// is handed. The heartbeat is the one line the link speaks with the machine's own words.
 
 void SerialLink::linkError(const char* code, const String& detail) {
   stream_.print("err ");
@@ -35,58 +40,31 @@ void SerialLink::linkError(const char* code, const String& detail) {
 // --- bytes -----------------------------------------------------------------
 
 void SerialLink::poll(uint32_t nowMs) {
-  (void)nowMs;
-
-  // The link reads the domain token and nothing else. Once the token is followed by a space or a
-  // tab, the stream belongs to the grammar, which parses the rest of the line (and any body).
+  // The line is the whole command: the link assembles it to its LF, drops the line ending and hands
+  // the text to the grammar. A line that outgrew CommandLineMax is answered once and its remainder
+  // dropped, so a host that never sends an LF cannot grow the buffer without bound.
   while (stream_.available() > 0) {
     int value = stream_.read();
     if (value < 0) break;
 
-    if (swallowing_) {
-      if (value == '\n') swallowing_ = false;
-      continue;
-    }
-
     if (value == '\n') {
-      if (buffer_.length() > 0 && buffer_.charAt(buffer_.length() - 1) == '\r') {
-        buffer_.remove(buffer_.length() - 1);
-      }
-      String token = buffer_;
+      String line = buffer_;
       buffer_ = "";
-      if (token.isEmpty() || token.charAt(0) == '#') continue;
-      if (token.length() > CommandLineMax) {
+      if (overlong_ || line.length() > CommandLineMax) {
+        overlong_ = false;
         linkError("bad_argument", "");
         continue;
       }
-
-      token.toLowerCase();
-      if (grammarFor(token) != Grammar::None) {
-        // A grammar with no command.
-        linkError("bad_argument", "");
-      } else {
-        linkError("unknown_domain", token);
-      }
+      line.trim();
+      if (line.isEmpty() || line.charAt(0) == '#') continue;
+      execute(stream_, line);
       continue;
     }
 
-    if (value == ' ' || value == '\t') {
-      if (buffer_.isEmpty()) continue;
-      if (buffer_.charAt(0) == '#') {
-        buffer_ = "";
-        swallowing_ = true;
-        continue;
-      }
-      String token = buffer_;
-      buffer_ = "";
-      if (!dispatch(token)) swallowing_ = true;
-      continue;
-    }
-
+    if (overlong_) continue;
     if (buffer_.length() > CommandLineMax) {
-      linkError("bad_argument", "");
       buffer_ = "";
-      swallowing_ = true;
+      overlong_ = true;
       continue;
     }
     buffer_ += (char)value;
@@ -95,48 +73,21 @@ void SerialLink::poll(uint32_t nowMs) {
   bool attached = controllerAttached();
   if (attached_ && !attached) {
     buffer_ = "";
-    swallowing_ = false;
+    overlong_ = false;
     logger_.warn("serial: controller detached");
   }
   attached_ = attached;
+  heartbeat(nowMs);
 }
 
-// The one list of what the link serves: the dispatcher and the token-only line both read it.
-SerialLink::Grammar SerialLink::grammarFor(const String& token) const {
-  if (token == "vacuum") return Grammar::Vacuum;
-  if (token == "device") return Grammar::Device;
-  if (token == "buzzer") return Grammar::Buzzer;
-  if (token == "fs") return Grammar::Files;
-  if (token == "gesture") return Grammar::Gesture;
-  return Grammar::None;
-}
-
-bool SerialLink::dispatch(const String& token) {
-  String name = token;
-  name.toLowerCase();
-
-  switch (grammarFor(name)) {
-    case Grammar::Vacuum:
-      executeVacuum(port_);
-      return true;
-    case Grammar::Device:
-      executeDevice(port_);
-      return true;
-    case Grammar::Buzzer:
-      executeBuzzer(port_);
-      return true;
-    case Grammar::Files:
-      executeFiles(port_);
-      return true;
-    case Grammar::Gesture:
-      executeGesture(port_);
-      return true;
-    case Grammar::None:
-      break;
-  }
-
-  linkError("unknown_domain", name);
-  return false;
+// Unsolicited, so it carries a word of its own: a controller reading `ok` and `err` replies does not
+// mistake a heartbeat for an answer. Nothing has it while nobody is listening: there is no one to
+// read it, and the lines would only sit in the USB CDC's ring.
+void SerialLink::heartbeat(uint32_t nowMs) {
+  if (!attached_) return;
+  if (nowMs - lastHeartbeatMs_ < HeartbeatPeriodMs) return;
+  lastHeartbeatMs_ = nowMs;
+  writeStatus(stream_, "hb ");
 }
 
 }  // namespace gardener
