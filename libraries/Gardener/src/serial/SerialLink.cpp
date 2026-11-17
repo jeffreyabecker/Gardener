@@ -12,12 +12,12 @@ constexpr uint32_t HeartbeatPeriodMs = 5000;
 }  // namespace
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control)
-    : stream_(stream), port_(stream), present_(present), logger_(logger), control_(control) {}
+    : stream_(stream), present_(present), logger_(logger), control_(control) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
   buffer_ = "";
-  swallowing_ = false;
+  overlong_ = false;
   logger_.info("serial: interface ready");
 }
 
@@ -40,56 +40,31 @@ void SerialLink::linkError(const char* code, const String& detail) {
 // --- bytes -----------------------------------------------------------------
 
 void SerialLink::poll(uint32_t nowMs) {
-  // The link reads the domain token and nothing else. Once the token is followed by a space or a
-  // tab, the stream belongs to the grammar, which parses the rest of the line (and any body).
+  // The line is the whole command: the link assembles it to its LF, drops the line ending and hands
+  // the text to the grammar. A line that outgrew CommandLineMax is answered once and its remainder
+  // dropped, so a host that never sends an LF cannot grow the buffer without bound.
   while (stream_.available() > 0) {
     int value = stream_.read();
     if (value < 0) break;
 
-    if (swallowing_) {
-      if (value == '\n') swallowing_ = false;
-      continue;
-    }
-
     if (value == '\n') {
-      if (buffer_.length() > 0 && buffer_.charAt(buffer_.length() - 1) == '\r') {
-        buffer_.remove(buffer_.length() - 1);
-      }
-      String token = buffer_;
+      String line = buffer_;
       buffer_ = "";
-      if (token.isEmpty() || token.charAt(0) == '#') continue;
-      if (token.length() > CommandLineMax) {
+      if (overlong_ || line.length() > CommandLineMax) {
+        overlong_ = false;
         linkError("bad_argument", "");
         continue;
       }
-
-      token.toLowerCase();
-      if (grammarFor(token) != Grammar::None) {
-        // A grammar with no command.
-        linkError("bad_argument", "");
-      } else {
-        linkError("unknown_domain", token);
-      }
+      line.trim();
+      if (line.isEmpty() || line.charAt(0) == '#') continue;
+      execute(stream_, line);
       continue;
     }
 
-    if (value == ' ' || value == '\t') {
-      if (buffer_.isEmpty()) continue;
-      if (buffer_.charAt(0) == '#') {
-        buffer_ = "";
-        swallowing_ = true;
-        continue;
-      }
-      String token = buffer_;
-      buffer_ = "";
-      if (!dispatch(token)) swallowing_ = true;
-      continue;
-    }
-
+    if (overlong_) continue;
     if (buffer_.length() > CommandLineMax) {
-      linkError("bad_argument", "");
       buffer_ = "";
-      swallowing_ = true;
+      overlong_ = true;
       continue;
     }
     buffer_ += (char)value;
@@ -98,7 +73,7 @@ void SerialLink::poll(uint32_t nowMs) {
   bool attached = controllerAttached();
   if (attached_ && !attached) {
     buffer_ = "";
-    swallowing_ = false;
+    overlong_ = false;
     logger_.warn("serial: controller detached");
   }
   attached_ = attached;
@@ -113,28 +88,6 @@ void SerialLink::heartbeat(uint32_t nowMs) {
   if (nowMs - lastHeartbeatMs_ < HeartbeatPeriodMs) return;
   lastHeartbeatMs_ = nowMs;
   writeStatus(stream_, "hb ");
-}
-
-// The one list of what the link serves: the dispatcher and the token-only line both read it.
-SerialLink::Grammar SerialLink::grammarFor(const String& token) const {
-  if (token == "vacuum") return Grammar::Vacuum;
-  return Grammar::None;
-}
-
-bool SerialLink::dispatch(const String& token) {
-  String name = token;
-  name.toLowerCase();
-
-  switch (grammarFor(name)) {
-    case Grammar::Vacuum:
-      executeVacuum(port_);
-      return true;
-    case Grammar::None:
-      break;
-  }
-
-  linkError("unknown_domain", name);
-  return false;
 }
 
 }  // namespace gardener

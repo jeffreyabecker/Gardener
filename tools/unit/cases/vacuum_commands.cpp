@@ -1,4 +1,4 @@
-// The machine's `vacuum` commands: the field list `get` publishes, the bounds `set` holds its
+// The machine's commands: the field list `get` publishes, the bounds `set` holds its
 // argument to, the run a set queues, and the refusals it answers. They run over the machine's real
 // VacuumSystem with the parts faked, because the answers are the loop's state.
 
@@ -89,7 +89,7 @@ bool contains(const std::string& text, const char* part) {
 
 TEST_CASE("get answers the pressure to two decimals and the rest to one") {
   Bench bench;
-  bench.send("vacuum get\n");
+  bench.send("get\n");
   const std::string reply = bench.reply();
   CHECK(contains(reply, "ok pressure_kpa=0.00 "));
   CHECK(contains(reply, " target=0.0 "));
@@ -98,7 +98,7 @@ TEST_CASE("get answers the pressure to two decimals and the rest to one") {
 
 TEST_CASE("get answers the state and the fault") {
   Bench bench;
-  bench.send("vacuum get\n");
+  bench.send("get\n");
   const std::string reply = bench.reply();
   CHECK(contains(reply, " state="));
   CHECK(contains(reply, " fault=none\n"));
@@ -107,7 +107,7 @@ TEST_CASE("get answers the state and the fault") {
 TEST_CASE("a set inside the range queues the target and a start") {
   Bench bench;
   bench.sensor.read(12.0f);
-  bench.send("vacuum set 5\n");
+  bench.send("set 5\n");
   CHECK_EQ(bench.reply(), std::string("ok target=5.0 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
@@ -121,9 +121,9 @@ TEST_CASE("a set inside the range queues the target and a start") {
 
 TEST_CASE("the ambient target is zero and the shorthand dash, and both release") {
   Bench bench;
-  bench.send("vacuum set 0\n");
+  bench.send("set 0\n");
   CHECK_EQ(bench.reply(), std::string("ok target=0.0 state=VENT\n"));
-  bench.send("vacuum set -\n");
+  bench.send("set -\n");
   CHECK_EQ(bench.reply(), std::string("ok target=0.0 state=VENT\n"));
 
   MachineCommand command{MachineCommand::Op::Start};
@@ -137,39 +137,39 @@ TEST_CASE("the ambient target is zero and the shorthand dash, and both release")
 TEST_CASE("the floor itself is an accepted target") {
   Bench bench;
   bench.sensor.read(12.0f);
-  bench.send("vacuum set 60\n");
+  bench.send("set 60\n");
   CHECK_EQ(bench.reply(), std::string("ok target=60.0 state=PULL\n"));
 }
 
 TEST_CASE("a target below ambient is refused with its minimum") {
   Bench bench;
-  bench.send("vacuum set -1\n");
+  bench.send("set -1\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=-1 min=0.0\n"));
   CHECK(bench.queue.empty());
 }
 
 TEST_CASE("a target that is not a number is refused with its minimum") {
   Bench bench;
-  bench.send("vacuum set nan\n");
+  bench.send("set nan\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=nan min=0.0\n"));
 }
 
 TEST_CASE("a target past the floor is refused with its maximum") {
   Bench bench;
-  bench.send("vacuum set 60.1\n");
+  bench.send("set 60.1\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=60.1 max=60.0\n"));
 }
 
 TEST_CASE("a second target token is refused by name") {
   Bench bench;
-  bench.send("vacuum set 5 6\n");
+  bench.send("set 5 6\n");
   CHECK_EQ(bench.reply(), std::string("err bad_argument 6\n"));
   CHECK(bench.queue.empty());
 }
 
 TEST_CASE("a set with no reading refuses and queues nothing") {
   Bench bench;
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK_EQ(bench.reply(), std::string("err not_ready no_reading\n"));
   CHECK(bench.queue.empty());
 }
@@ -185,7 +185,7 @@ TEST_CASE("a latched fault refuses a set") {
   bench.machine.vacuum().service(gardener::host::nowMs());
   REQUIRE_EQ(std::string(bench.machine.vacuum().faultCode()), std::string("sensor"));
 
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK_EQ(bench.reply(), std::string("err not_ready latch\n"));
 }
 
@@ -193,7 +193,7 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
   Bench bench;
   bench.sensor.read(12.0f);
 
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK_EQ(bench.reply(), std::string("ok target=40.0 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
@@ -207,23 +207,23 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
 
 TEST_CASE("vent answers the release it queues") {
   Bench bench;
-  bench.send("vacuum vent\n");
+  bench.send("vent\n");
   CHECK_EQ(bench.reply(), std::string("ok state=VENT\n"));
   CHECK_FALSE(bench.queue.empty());
 }
 
 TEST_CASE("reset answers the idle state it queues") {
   Bench bench;
-  bench.send("vacuum reset\n");
+  bench.send("reset\n");
   CHECK_EQ(bench.reply(), std::string("ok state=IDLE\n"));
   CHECK_FALSE(bench.queue.empty());
 }
 
 TEST_CASE("a refused set leaves the queue empty and a queued one fills it") {
   Bench bench;
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK(bench.queue.empty());
   bench.sensor.read(12.0f);
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK_EQ(bench.queue.count(), static_cast<size_t>(2));
 }

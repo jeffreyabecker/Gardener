@@ -14,14 +14,14 @@ device has, over the serial link it builds.
 
 ## Wire
 
-One domain, `vacuum`, with four verbs on a line ending in LF:
+Four verbs on a line ending in LF:
 
 | command | answer |
 | --- | --- |
-| `vacuum get` | `ok pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
-| `vacuum set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
-| `vacuum vent` | `ok state=VENT` |
-| `vacuum reset` | `ok state=IDLE` — clears a latched fault |
+| `get` | `ok pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
+| `vent` | `ok state=VENT` |
+| `reset` | `ok state=IDLE` — clears a latched fault |
 
 A set is a target and a run in one command, and the run is granted the machine's own ceiling
 (two hours). Zero is the ambient target, which releases the chamber, so `set 0` and `set -` vent.
@@ -31,7 +31,7 @@ same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err`
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
 unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the
-`vacuum get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
+`get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
 without polling. Its own word keeps it clear of the replies a controller is waiting for.
 
 ## Build

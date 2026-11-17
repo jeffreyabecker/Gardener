@@ -1,7 +1,7 @@
-// The serial link's framing: which bytes end a domain token, what a line the link cannot dispatch
-// answers, what happens to a half-read token when the controller goes away, and the heartbeat it
+// The serial link's framing: which bytes end a command line, what a line the link cannot serve
+// answers, what happens to a half-read line when the controller goes away, and the heartbeat it
 // writes on its own clock. The bench is the real surface over fakes — a short reply is enough to see
-// that the body reached the grammar; the machine's own commands are in vacuum_commands.cpp.
+// that the line reached the grammar; the machine's own commands are in vacuum_commands.cpp.
 
 #include <doctest.h>
 
@@ -84,45 +84,45 @@ struct Bench {
 
 }  // namespace
 
-TEST_CASE("a lowercase domain dispatches") {
+TEST_CASE("a lowercase verb dispatches") {
+  Bench bench;
+  bench.send("vent\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
+}
+
+TEST_CASE("an uppercase verb dispatches") {
+  Bench bench;
+  bench.send("VENT\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
+}
+
+TEST_CASE("a mixed case verb dispatches") {
+  Bench bench;
+  bench.send("VeNt\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
+}
+
+TEST_CASE("the old domain prefix is just an unknown verb") {
   Bench bench;
   bench.send("vacuum vent\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
-}
-
-TEST_CASE("an uppercase domain dispatches") {
-  Bench bench;
-  bench.send("VACUUM vent\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
-}
-
-TEST_CASE("a mixed case domain dispatches") {
-  Bench bench;
-  bench.send("VaCuUm vent\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
-}
-
-TEST_CASE("a domain token with nothing after it is a bad argument") {
-  Bench bench;
-  bench.send("vacuum\n");
-  CHECK_EQ(bench.io.printed(), std::string("err bad_argument\n"));
+  CHECK_EQ(bench.io.printed(), std::string("err unknown_verb vacuum\n"));
 }
 
 TEST_CASE("a comment answers nothing and the next line still dispatches") {
   Bench bench;
-  bench.send("# a note about the line below\nvacuum vent\n");
+  bench.send("# a note about the line below\nvent\n");
   CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
 }
 
-TEST_CASE("a tab ends the domain token") {
+TEST_CASE("leading and trailing whitespace is trimmed") {
   Bench bench;
-  bench.send("vacuum\tvent\n");
+  bench.send("  vent  \n");
   CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
 }
 
 TEST_CASE("a CRLF line leaves no carriage return in the body") {
   Bench bench;
-  bench.send("vacuum vent\r\n");
+  bench.send("vent\r\n");
   CHECK_EQ(bench.io.printed(), std::string("ok state=VENT\n"));
 }
 
@@ -134,16 +134,16 @@ TEST_CASE("a token longer than the line maximum is refused") {
   CHECK_EQ(bench.io.printed(), std::string("err bad_argument\n"));
 }
 
-TEST_CASE("an unknown domain names the token it could not dispatch") {
+TEST_CASE("an unknown verb names the token it could not serve") {
   Bench bench;
   bench.send("Bogus get\n");
-  CHECK_EQ(bench.io.printed(), std::string("err unknown_domain bogus\n"));
+  CHECK_EQ(bench.io.printed(), std::string("err unknown_verb bogus\n"));
 }
 
-TEST_CASE("a domain's body reaches its grammar intact") {
+TEST_CASE("the verb's argument reaches the grammar intact") {
   Bench bench;
   bench.sensor.read(12.0f);
-  bench.send("vacuum set 40\n");
+  bench.send("set 40\n");
   CHECK_EQ(bench.io.printed(), std::string("ok target=40.0 state=PULL\n"));
 }
 
@@ -192,10 +192,10 @@ TEST_CASE("a detached controller gets no heartbeat") {
            std::string("hb pressure_kpa=0.00 target=0.0 state=IDLE duty=0.0 fault=none\n"));
 }
 
-TEST_CASE("a lost controller is reported and a half-read token is dropped") {
+TEST_CASE("a lost controller is reported and a half-read line is dropped") {
   Bench bench;
   controllerPresent = true;
-  bench.io.type("vac");
+  bench.io.type("ven");
   bench.link.poll(gardener::host::nowMs());
 
   controllerPresent = false;
@@ -203,6 +203,6 @@ TEST_CASE("a lost controller is reported and a half-read token is dropped") {
   CHECK(bench.logger.saw("serial: controller detached"));
 
   controllerPresent = true;
-  bench.send("uum get\n");
-  CHECK_EQ(bench.io.printed(), std::string("err unknown_domain uum\n"));
+  bench.send("t\n");
+  CHECK_EQ(bench.io.printed(), std::string("err unknown_verb t\n"));
 }

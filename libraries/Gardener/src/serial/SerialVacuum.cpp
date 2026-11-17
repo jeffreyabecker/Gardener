@@ -92,7 +92,7 @@ void reset(Stream& io, const String& args, SystemControl& control) {
 
 }  // namespace
 
-// The status line both `vacuum get` and the heartbeat write, so the two cannot drift apart.
+// The status line both `get` and the heartbeat write, so the two cannot drift apart.
 void SerialLink::writeStatus(Stream& io, const char* prefix) const {
   const SystemStatus status = control_.status();
 
@@ -116,14 +116,7 @@ void SerialLink::writeStatus(Stream& io, const char* prefix) const {
 }
 
 // The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
-void SerialLink::executeVacuum(Stream& io) {
-  String line = io.readStringUntil('\n');
-  line.trim();
-  if (line.length() > CommandLineMax) {
-    io.print("err bad_argument\n");
-    return;
-  }
-
+void SerialLink::execute(Stream& io, const String& line) {
   const int space = line.indexOf(' ');
   String verb = space < 0 ? line : line.substring(0, (unsigned int)space);
   String args = space < 0 ? String() : line.substring((unsigned int)space + 1);

@@ -57,7 +57,7 @@ class VacuumSystem {
 
   // --- the reads ----------------------------------------------------------
   // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
-  // same number `vacuum get` reports as `pressure_kpa`. Zero while there is no reading: the part is
+  // same number `get` reports as `pressure_kpa`. Zero while there is no reading: the part is
   // not answering, or no sample has been filtered yet.
   float currentPressureKpa() const;
   RunState runState() const { return state_; }
@@ -107,7 +107,7 @@ class VacuumSystem {
   VentValve* vent_;
 
   RunState state_ = RunState::Idle;
-  float targetPressureKpa_ = 0.0f;  // 0 is the ambient target, and what `vacuum get` reports
+  float targetPressureKpa_ = 0.0f;  // 0 is the ambient target, and what `get` reports
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
   // VENT is either a release to ambient or a controlled vent to the current target; this is what

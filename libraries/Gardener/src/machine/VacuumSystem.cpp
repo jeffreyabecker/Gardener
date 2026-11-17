@@ -173,7 +173,7 @@ void VacuumSystem::resetFault() {
 }
 
 // The latch and the safe state, in that order: the output is cut now rather than ramped, the valve
-// is opened, and the code is what `vacuum get` reports until resetFault(). Nothing writes a duty
+// is opened, and the code is what `get` reports until resetFault(). Nothing writes a duty
 // again while it is set, because nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
   pump_->halt();
@@ -187,7 +187,7 @@ void VacuumSystem::fail(const char* code) {
 
 void VacuumSystem::service(uint32_t nowMs) {
   // A latched fault owns the state until it is reset: the vacuum system is already safe, and the
-  // code is what `vacuum get` reports.
+  // code is what `get` reports.
   if (faulted()) return;
 
   // Regulating on a reading nobody trusts is how the loop runs away, and a release cannot see the
