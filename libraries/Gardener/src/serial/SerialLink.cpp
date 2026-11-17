@@ -106,12 +106,13 @@ void SerialLink::poll(uint32_t nowMs) {
 }
 
 // Unsolicited, so it carries a word of its own: a controller reading `ok` and `err` replies does not
-// mistake a heartbeat for an answer.
+// mistake a heartbeat for an answer. Nothing has it while nobody is listening: there is no one to
+// read it, and the lines would only sit in the USB CDC's ring.
 void SerialLink::heartbeat(uint32_t nowMs) {
+  if (!attached_) return;
   if (nowMs - lastHeartbeatMs_ < HeartbeatPeriodMs) return;
   lastHeartbeatMs_ = nowMs;
-  stream_.print("hb ");
-  writeStatus(stream_);
+  writeStatus(stream_, "hb ");
 }
 
 // The one list of what the link serves: the dispatcher and the token-only line both read it.

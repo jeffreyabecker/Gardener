@@ -76,8 +76,10 @@ class SerialLink {
   bool dispatch(const String& token);
   // The grammar: the rest of the line is read from the stream it is handed.
   void executeVacuum(Stream& io);
-  // The status line: the fields `vacuum get` answers with, which the heartbeat repeats.
-  void writeStatus(Stream& io) const;
+  // The status line: the fields `vacuum get` answers with, which the heartbeat repeats. It goes out
+  // in one write, because the S3's USB CDC drops a write of its own when its ring is busy and a line
+  // built from twenty of them loses whichever ones lost the race.
+  void writeStatus(Stream& io, const char* prefix) const;
   // The unsolicited status line, one per HeartbeatPeriodMs of the link's own clock.
   void heartbeat(uint32_t nowMs);
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.

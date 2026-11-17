@@ -178,6 +178,20 @@ TEST_CASE("the heartbeat repeats on its own period and not on every poll") {
            std::string("hb pressure_kpa=0.00 target=0.0 state=IDLE duty=0.0 fault=none\n"));
 }
 
+TEST_CASE("a detached controller gets no heartbeat") {
+  Bench bench;
+  controllerPresent = false;
+  gardener::host::advance(5000);
+  bench.link.poll(gardener::host::nowMs());
+  CHECK_EQ(bench.io.printed(), std::string(""));
+
+  controllerPresent = true;
+  gardener::host::advance(5000);
+  bench.link.poll(gardener::host::nowMs());
+  CHECK_EQ(bench.io.printed(),
+           std::string("hb pressure_kpa=0.00 target=0.0 state=IDLE duty=0.0 fault=none\n"));
+}
+
 TEST_CASE("a lost controller is reported and a half-read token is dropped") {
   Bench bench;
   controllerPresent = true;

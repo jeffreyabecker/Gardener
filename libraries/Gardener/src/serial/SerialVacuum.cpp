@@ -93,23 +93,26 @@ void reset(Stream& io, const String& args, SystemControl& control) {
 }  // namespace
 
 // The status line both `vacuum get` and the heartbeat write, so the two cannot drift apart.
-void SerialLink::writeStatus(Stream& io) const {
+void SerialLink::writeStatus(Stream& io, const char* prefix) const {
   const SystemStatus status = control_.status();
-  io.print("pressure_kpa=");
-  io.print(status.pressureKpa, 2u);
+
+  String line = prefix;
+  line += "pressure_kpa=";
+  line += String(status.pressureKpa, 2u);
 
   // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
   // the one that holds the chamber released.
-  io.print(" target=");
-  io.print(status.targetKpa, 1u);
+  line += " target=";
+  line += String(status.targetKpa, 1u);
 
-  io.print(" state=");
-  io.print(runStateName(status.state));
-  io.print(" duty=");
-  io.print(status.dutyPercent, 1u);
-  io.print(" fault=");
-  io.print(status.fault[0] ? status.fault : "none");
-  io.print('\n');
+  line += " state=";
+  line += runStateName(status.state);
+  line += " duty=";
+  line += String(status.dutyPercent, 1u);
+  line += " fault=";
+  line += (status.fault[0] ? status.fault : "none");
+  line += '\n';
+  io.print(line);
 }
 
 // The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
@@ -138,8 +141,7 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    io.print("ok ");
-    writeStatus(io);
+    writeStatus(io, "ok ");
     return;
   }
   if (verb == "set") {

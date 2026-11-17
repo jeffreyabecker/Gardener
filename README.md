@@ -29,10 +29,10 @@ A target is refused with `err out_of_range` past the fitted floor, and with `err
 the machine has no reading or a latched fault. The boot and run lines the firmware logs share the
 same stream, framed as `[I]`, `[W]` and `[E]`, so a controller reads the `ok` and `err` lines.
 
-Every five seconds the link also writes a heartbeat unprompted —
-`hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the `vacuum get` fields
-without the `ok` — so a controller can tell a quiet machine from a dead one without polling. Its own
-word keeps it clear of the replies a controller is waiting for.
+Every five seconds, while a controller has the port open, the link also writes a heartbeat
+unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the
+`vacuum get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
+without polling. Its own word keeps it clear of the replies a controller is waiting for.
 
 ## Build
 
