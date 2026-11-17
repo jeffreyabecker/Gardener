@@ -3,7 +3,8 @@
 ## Checks
 
 `python tools/unit/check.py` is how the tree's C++ is validated. It compiles `libraries/Gardener`
-with the host tools and the cases under doctest and runs them, in seconds and with no board, no
+and the sketch's platform-free headers with the host tools and the cases under doctest and runs
+them, in seconds and with no board, no
 interpreter and no data image. `--list-test-cases` lists what it holds and `--test-case="a name"`
 runs one case while a change is being made. A change to the machine or the wire is checked with it,
 and that is the check to run.

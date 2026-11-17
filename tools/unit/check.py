@@ -30,6 +30,9 @@ HOST = TOOLS / "host"
 API = HOST / "arduino-core-api"
 DOCTEST = TOOLS / "doctest"
 GARDENER = ROOT / "libraries" / "Gardener"
+# The sketch's own headers, so a case can reach the ones that name nothing of the board — the form
+# codec the HTTP API speaks. Its sources still need the chip and are the sketch build's.
+SKETCH = ROOT / "firmware" / "gardener"
 BUILD = TOOL / "build"
 EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 
@@ -80,7 +83,7 @@ def sources():
 
 
 def include_dirs():
-    return [TOOL, HOST / "arduino", API, DOCTEST, GARDENER / "src"]
+    return [TOOL, HOST / "arduino", API, DOCTEST, GARDENER / "src", SKETCH]
 
 
 def build(cxx):
