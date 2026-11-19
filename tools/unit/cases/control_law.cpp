@@ -14,15 +14,15 @@
 
 namespace {
 
-using gardener::ControlDeadbandKpa;
+using gardener::ControlAbovePercent;
+using gardener::ControlBelowPercent;
 using gardener::ControlFloorKpa;
 using gardener::ControlMaxRunMs;
-using gardener::ControlOvershootKpa;
 using gardener::ControlOvershootReadings;
+using gardener::ControlOvershootRecoveries;
 using gardener::ControlPeriodMs;
 using gardener::ControlProgressKpa;
 using gardener::ControlProgressTimeoutMs;
-using gardener::PumpDutyMaxPercent;
 using gardener::RunState;
 using gardener::VacuumSystem;
 using gardener::VentFloorKpa;
@@ -77,6 +77,10 @@ void runFrom(Rig& rig, float reading, float target) {
   rig.beat();
 }
 
+// The band either side of `target`, as depths: the edges the relay and the valve work from.
+float shallowEdge(float target) { return target * (1.0f - ControlBelowPercent / 100.0f); }
+float deepEdge(float target) { return target * (1.0f + ControlAbovePercent / 100.0f); }
+
 }  // namespace
 
 TEST_CASE("a target of zero releases the chamber") {
@@ -86,7 +90,7 @@ TEST_CASE("a target of zero releases the chamber") {
   rig.beat(2);
   CHECK_EQ(rig.system.runState(), RunState::Venting);
   CHECK(rig.valve.vents());
-  CHECK_EQ(rig.pump.duty(), 0.0f);
+  CHECK_FALSE(rig.pump.active());
 }
 
 TEST_CASE("stop from idle changes nothing and starts no vent") {
@@ -168,7 +172,7 @@ TEST_CASE("a target set shallower than the reading vents to it and carries on") 
   }
   rig.beat();
   CHECK_FALSE(rig.valve.vents());
-  CHECK_EQ(rig.system.runState(), RunState::Pulling);
+  CHECK_EQ(rig.system.runState(), RunState::Holding);
 }
 
 TEST_CASE("a sensor that stops answering faults the run") {
@@ -189,7 +193,7 @@ TEST_CASE("a release that misses the vent floor faults on its timeout") {
   CHECK_EQ(std::string(rig.system.faultCode()), std::string("vent_timeout"));
 }
 
-TEST_CASE("a pull with no headway at high duty faults") {
+TEST_CASE("a pump that makes no headway faults") {
   Rig rig;
   runFrom(rig, 10.0f, 40.0f);
   while (gardener::host::nowMs() < ControlProgressTimeoutMs + ControlPeriodMs) {
@@ -199,24 +203,50 @@ TEST_CASE("a pull with no headway at high duty faults") {
   CHECK_EQ(std::string(rig.system.faultCode()), std::string("no_progress"));
 }
 
-TEST_CASE("readings past the target fault the run") {
+TEST_CASE("the pump runs below the band and stops inside it") {
   Rig rig;
-  runFrom(rig, 20.0f, 20.0f);
-  for (int i = 0; i < ControlOvershootReadings + 1; i++) {
-    rig.sensor.read(20.0f + ControlOvershootKpa);
-    rig.beat();
-  }
-  CHECK_EQ(std::string(rig.system.faultCode()), std::string("overshoot"));
+  runFrom(rig, 0.0f, 20.0f);
+  rig.beat();
+  CHECK(rig.pump.active());
+
+  rig.sensor.read(20.0f);
+  rig.beat();
+  CHECK_FALSE(rig.pump.active());
+
+  rig.sensor.read(shallowEdge(20.0f));
+  rig.beat();
+  CHECK(rig.pump.active());
 }
 
-TEST_CASE("the duty never exceeds the pump's ceiling") {
+TEST_CASE("a reading past the band vents back instead of faulting") {
   Rig rig;
-  runFrom(rig, 90.0f, ControlFloorKpa);
-  for (int i = 0; i < 200; i++) {
-    rig.sensor.read(90.0f - static_cast<float>(i) * 0.1f);
+  runFrom(rig, 20.0f, 20.0f);
+  for (int i = 0; i < ControlOvershootReadings; i++) {
+    rig.sensor.read(deepEdge(20.0f) + 1.0f);
     rig.beat();
-    CHECK(rig.pump.duty() <= PumpDutyMaxPercent);
   }
+  CHECK_EQ(std::string(rig.system.faultCode()), std::string(""));
+  CHECK(rig.valve.vents());
+  CHECK_EQ(rig.system.runState(), RunState::Venting);
+
+  // The vent lands just past the target, and the pump takes the band back up from the leak.
+  rig.sensor.read(19.5f);
+  rig.beat();
+  CHECK_FALSE(rig.valve.vents());
+  CHECK_EQ(rig.system.runState(), RunState::Holding);
+
+  rig.sensor.read(18.9f);
+  rig.beat();
+  CHECK(rig.pump.active());
+}
+
+TEST_CASE("a run that keeps overshooting the same way faults") {
+  Rig rig;
+  runFrom(rig, 20.0f, 20.0f);
+  rig.sensor.read(deepEdge(20.0f) + 1.0f);
+  rig.beatUntil((VentTimeoutMs + 1000) * (ControlOvershootRecoveries + 1));
+  CHECK_EQ(std::string(rig.system.faultCode()), std::string("overshoot"));
+  CHECK(rig.valve.vents());
 }
 
 TEST_CASE("a release stops the pump before it opens the valve") {
@@ -225,16 +255,17 @@ TEST_CASE("a release stops the pump before it opens the valve") {
   rig.events.clear();
   rig.system.stop();
   rig.beat();
-  const int stopped = rig.eventIndex("pump.stop");
+  const int stopped = rig.eventIndex("pump.off");
   const int opened = rig.eventIndex("valve.open");
   REQUIRE(stopped >= 0);
   REQUIRE(opened >= 0);
   CHECK(stopped < opened);
 }
 
-TEST_CASE("the reported floor and deadband are the loop's own numbers") {
+TEST_CASE("the reported floor and band are the loop's own numbers") {
   CHECK_EQ(ControlFloorKpa, 60.0f);
-  CHECK_EQ(ControlDeadbandKpa, 0.2f);
+  CHECK_EQ(ControlBelowPercent, 5.0f);
+  CHECK_EQ(ControlAbovePercent, 5.0f);
   CHECK_EQ(VentFloorKpa, 1.0f);
   CHECK_EQ(VentMarginKpa, 2.0f);
   CHECK_EQ(ControlProgressKpa, 1.0f);

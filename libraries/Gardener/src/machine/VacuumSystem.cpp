@@ -1,12 +1,18 @@
 #include "machine/VacuumSystem.h"
 
 #include <Arduino.h>
-#include <math.h>
 
-#include "core/Math.h"
 #include "machine/Machine.h"
 
 namespace gardener {
+namespace {
+
+// The band either side of a target, as depths: under the first the pump runs, over the second the
+// valve opens. Both are a percentage of the target, so the band travels with it.
+float shallowEdgeKpa(float targetKpa) { return targetKpa * (1.0f - ControlBelowPercent / 100.0f); }
+float deepEdgeKpa(float targetKpa) { return targetKpa * (1.0f + ControlAbovePercent / 100.0f); }
+
+}  // namespace
 
 // A latched fault owns the state until it is reset: a command can still make the vacuum system safe,
 // but none of them can move the state off Fault, so runState() == Fault and faulted() agree.
@@ -17,7 +23,6 @@ void VacuumSystem::setState(RunState state) {
 
 void VacuumSystem::begin() {
   rest();
-  lastControlMs_ = millis();
   // A chamber that comes up above the vent floor is not at rest: report the release, and let the
   // floor or the timeout finish it.
   if (sensor_->present() && sensor_->readingValid() && !released()) release();
@@ -28,12 +33,11 @@ float VacuumSystem::currentPressureKpa() const {
 }
 
 void VacuumSystem::rest() {
-  pump_->stop();
+  pump_->off();
   vent_->open();  // assert the vented resting state when asked
-  pidReset();
-  output_ = 0.0f;
   ventingToTarget_ = false;
   overshootReadings_ = 0;
+  overshootRecoveries_ = 0;
   setState(RunState::Idle);
 }
 
@@ -51,11 +55,8 @@ bool VacuumSystem::start(uint32_t holdSeconds) {
   // Close before pumping, so the pump never pulls against an open port.
   vent_->close();
   ventingToTarget_ = false;
-  pidReset();
-  output_ = 0.0f;
-  lastControlMs_ = millis();
 
-  runStartMs_ = lastControlMs_;
+  runStartMs_ = millis();
   const uint32_t maxHoldSeconds = ControlMaxRunMs / 1000;
   if (holdSeconds > maxHoldSeconds) holdSeconds = maxHoldSeconds;
   holdMs_ = holdSeconds == 0 ? ControlMaxRunMs : holdSeconds * 1000;
@@ -63,6 +64,7 @@ bool VacuumSystem::start(uint32_t holdSeconds) {
   progressMs_ = runStartMs_;
   bestDepthKpa_ = currentPressureKpa();
   overshootReadings_ = 0;
+  overshootRecoveries_ = 0;
 
   // The chamber may already be shallower or deeper than the target; the one decision says which
   // actuator gets it there.
@@ -104,35 +106,29 @@ bool VacuumSystem::released() const {
 
 // Stop, then open: the pump never pulls against an open port. The state is VENT either way, and
 // ventingToTarget_ is what tells the service loop which ending to wait for.
-void VacuumSystem::beginTargetVent() {
-  pump_->stop();
+void VacuumSystem::beginTargetVent(bool deep) {
+  pump_->off();
   vent_->open();
-  pidReset();
-  output_ = 0.0f;
   ventingToTarget_ = true;
+  ventLandingDeep_ = deep;
   ventStartMs_ = millis();
   setState(RunState::Venting);
 }
 
 // Seal the chamber and hand it back to the run. A vent that has just landed, and a target that is
-// already where the pump works, both arrive here, so the derivative's first step never sees the
-// valve's slew.
+// already where the pump works, both arrive here, so the headway the pump is judged on starts here
+// rather than in the middle of a vent.
 void VacuumSystem::closeValve() {
   vent_->close();
   ventingToTarget_ = false;
-  pidReset();
-  output_ = 0.0f;
-  lastControlMs_ = millis();
-  lastMeasured_ = currentPressureKpa();
-  bestDepthKpa_ = lastMeasured_;
-  progressMs_ = lastControlMs_;
+  bestDepthKpa_ = currentPressureKpa();
+  progressMs_ = millis();
 }
 
 // The one decision, from the command's outcome, the state and the reading: a target of 0 releases,
-// a reading shallower than the target opens the valve, and anything else closes it and lets the
-// loop work. Every command ends here, so the vent/start/stop choice is made once.
+// a reading past the band opens the valve, and anything else closes it and lets the loop work.
+// Every command ends here, so the vent/start/stop choice is made once.
 void VacuumSystem::converge() {
-  const float deadband = ControlDeadbandKpa;
   const float measured = currentPressureKpa();
 
   // Ambient is the release, whichever way it was asked for.
@@ -143,13 +139,13 @@ void VacuumSystem::converge() {
 
   // Shallower than the chamber: the pump cannot vent, so the valve does, and the landing hands the
   // run back to the loop.
-  if (measured > targetPressureKpa_ + deadband) {
-    if (!ventingToTarget_) beginTargetVent();
+  if (measured > deepEdgeKpa(targetPressureKpa_)) {
+    if (!ventingToTarget_) beginTargetVent(ControlVentToTarget);
     return;
   }
 
   closeValve();
-  setState(measured >= targetPressureKpa_ - deadband ? RunState::Holding : RunState::Pulling);
+  setState(measured >= shallowEdgeKpa(targetPressureKpa_) ? RunState::Holding : RunState::Pulling);
 }
 
 void VacuumSystem::setTarget(float pressureKpa) {
@@ -158,7 +154,6 @@ void VacuumSystem::setTarget(float pressureKpa) {
   if (!(pressureKpa >= 0.0f) || pressureKpa > ControlFloorKpa) return;
   if (pressureKpa == targetPressureKpa_) return;
   targetPressureKpa_ = pressureKpa;
-  pidReset();
 
   // A target written while nothing is running is stored, not acted on.
   if (!running()) return;
@@ -172,14 +167,12 @@ void VacuumSystem::resetFault() {
   if (state_ == RunState::Fault) release();
 }
 
-// The latch and the safe state, in that order: the output is cut now rather than ramped, the valve
-// is opened, and the code is what `get` reports until resetFault(). Nothing writes a duty
-// again while it is set, because nothing but resetFault() leaves Fault.
+// The latch and the safe state, in that order: the pump is cut, the valve is opened, and the code
+// is what `get` reports until resetFault(). Nothing drives the pump while it is set, because
+// nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
-  pump_->halt();
+  pump_->off();
   vent_->open();  // drive the valve open: the safe direction
-  pidReset();
-  output_ = 0.0f;
   ventingToTarget_ = false;
   faultCode_ = code ? code : "unknown";
   setState(RunState::Fault);
@@ -210,7 +203,7 @@ void VacuumSystem::service(uint32_t nowMs) {
   if (state_ == RunState::Venting) {
     if (ventingToTarget_) {
       const float landing =
-          ControlVentToTarget ? targetPressureKpa_ + VentTargetLeadKpa : targetPressureKpa_;
+          ventLandingDeep_ ? targetPressureKpa_ + VentTargetLeadKpa : targetPressureKpa_;
       const bool arrived = currentPressureKpa() <= landing;
       const bool timedOut = (nowMs - ventStartMs_) >= VentTimeoutMs;
       if (!arrived && !timedOut) return;
@@ -228,85 +221,62 @@ void VacuumSystem::service(uint32_t nowMs) {
 
   // The two transitions that are facts about the chamber rather than orders: the target has
   // been reached, and the release is over. A latched fault owns the state, so neither can
-  // fire while one is held. Reached is the reading inside the deadband around the target rather
-  // than merely past its near edge: a vent lands a lead deeper than the target, and until the leak
-  // brings that back inside the band the run is still travelling rather than holding.
-  if (state_ == RunState::Pulling &&
-      fabsf(currentPressureKpa() - targetPressureKpa_) <= ControlDeadbandKpa) {
+  // fire while one is held. Reached is the reading inside the band rather than merely past its
+  // near edge: a vent lands past the target, and until the leak brings that back inside the band
+  // the run is still travelling rather than holding.
+  const float reached = currentPressureKpa();
+  if (state_ == RunState::Pulling && reached >= shallowEdgeKpa(targetPressureKpa_) &&
+      reached <= deepEdgeKpa(targetPressureKpa_)) {
     setState(RunState::Holding);
   }
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
-    // A reading the overshoot margin past the target is the loop not holding what it was asked to,
-    // so the chamber is released rather than pulled further out of range.
+    // A reading past the band is a chamber the pump was told to stop and did not, or a reading
+    // nothing on the rig explains. The valve is the only way back, so the run vents to the target
+    // and the pump takes it up again. A run that keeps needing that is the second case: the
+    // reading never came back, so the run is released.
     const float measured = currentPressureKpa();
-    if (measured < targetPressureKpa_ + ControlOvershootKpa) {
+    if (measured < deepEdgeKpa(targetPressureKpa_)) {
       overshootReadings_ = 0;
     } else if (++overshootReadings_ >= ControlOvershootReadings) {
-      fail("overshoot");
+      overshootReadings_ = 0;
+      if (++overshootRecoveries_ > ControlOvershootRecoveries) {
+        fail("overshoot");
+      } else {
+        beginTargetVent(false);
+        return;
+      }
     }
     if (faulted()) return;
     regulate(nowMs);
   }
 }
 
-// error is how far the chamber still is from the target, so positive means "still needs
-// vacuum"; the derivative term uses the measurement slew rather than the error slope, which
-// keeps a setpoint change from kicking the output. The gains are derived from the build's two rig
-// numbers, so a pump or chamber change retunes it without touching a gain.
-float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
-  const PidGains gains = pidGainsFor(PumpFlowLpm, ChamberVolumeL);
-  pidIntegral_ =
-      clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit, gains.integralLimit);
-  return gains.kp * error + pidIntegral_ - gains.kd * measurementSlew;
-}
-
+// The pump is a switch, so the loop is a relay rather than a regulator: on while the chamber is
+// shallower than the lower edge of the band, off once the reading is back inside it, and the leak
+// brings the depth down to the edge again. The one thing the loop must notice for itself is a pump
+// that is on with no headway to show for it, which is a blocked hose or a pump that never started.
 void VacuumSystem::regulate(uint32_t nowMs) {
-  if (nowMs - lastControlMs_ < ControlPeriodMs) return;
+  const float measured = currentPressureKpa();
 
-  float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
-  lastControlMs_ = nowMs;
-  if (dt <= 0.0f) return;
-
-  const float deadband = ControlDeadbandKpa;
-  const float maxDuty = PumpDutyMaxPercent;
-
-  // The slew comes off the same reading the error is built from, so the derivative gain is
-  // signed against it.
-  float measured = currentPressureKpa();
-  float error = targetPressureKpa_ - measured;  // positive means "still needs vacuum"
-
-  if (error < -deadband) {
-    // Deeper than requested; the pump cannot vent, so coast and let it leak back toward ambient.
-    pidReset();
-    output_ = 0.0f;
-    pump_->stop();
-    lastMeasured_ = measured;
+  if (measured > shallowEdgeKpa(targetPressureKpa_)) {
+    pump_->off();
     return;
   }
 
-  float controlError = fabsf(error) <= deadband ? 0.0f : error;
-
-  // The derivative is the reading's change over this control period; dt is positive here because
-  // regulate() returns unless a whole period has passed.
-  const float slew = (measured - lastMeasured_) / dt;
-
-  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, maxDuty);
-  pump_->setDuty(output_);
-
-  // A pull driven at or above half the duty cap for a whole window without a kilopascal of
-  // headway is the pump working against something it cannot move, and no controller has to notice.
-  if (state_ == RunState::Pulling) {
-    if (measured >= bestDepthKpa_ + ControlProgressKpa) {
-      bestDepthKpa_ = measured;
-      progressMs_ = nowMs;
-    } else if (output_ < maxDuty * ControlProgressDutyFraction) {
-      progressMs_ = nowMs;
-    } else if (nowMs - progressMs_ >= ControlProgressTimeoutMs) {
-      fail("no_progress");
-    }
+  // Headway is counted from the moment the pump came on, so a hold that cycles does not read as a
+  // pull that never moved.
+  if (!pump_->active()) {
+    bestDepthKpa_ = measured;
+    progressMs_ = nowMs;
   }
+  pump_->on();
 
-  lastMeasured_ = measured;
+  if (measured >= bestDepthKpa_ + ControlProgressKpa) {
+    bestDepthKpa_ = measured;
+    progressMs_ = nowMs;
+  } else if (nowMs - progressMs_ >= ControlProgressTimeoutMs) {
+    fail("no_progress");
+  }
 }
 
 }  // namespace gardener

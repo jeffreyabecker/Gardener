@@ -29,9 +29,9 @@ machine is that a normally open one vents the chamber on any fault.
 The build is the POC's loop with the breadboard replaced by the carrier, and one simplification on
 top: the pump and the valve are 5 V parts, so the DRV8833 runs straight off the USB 5 V rail and no
 buck is needed. USB-C 5 V in, the pump and valve on the DRV8833, the MCU on the same 5 V rail
-through its own regulator, and the sensor, OLED and buttons on the MCU's 3.3 V. `PwmPump` owns the
-pump's LEDC channel and the valve is the part it has always been; a different pump or rail later is
-a `Board` block, not a library.
+through its own regulator, and the sensor, OLED and buttons on the MCU's 3.3 V. `GpioPump` owns the
+pump's low-side switch and the valve is the part it has always been; a different pump or rail later
+is a `Board` block, not a library.
 
 ## Power
 

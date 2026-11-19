@@ -39,9 +39,9 @@ single rail both parts are inside, and it is already in the cable. What it deman
 - A 1000 µF bulk capacitor at VM absorbs the surge and the solenoid's kickback locally. The DRV8833's
   body diodes are the flyback path, so no diodes are added — but that only holds if the driver is a
   DRV8833; a discrete H-bridge needs its own.
-- The pump's 5 V ceiling becomes the rig's ceiling. The firmware already reports the pump's reach as
-  the floor and pins the duty there, so nothing breaks — a deep target simply cannot be reached. The
-  open question is whether 40–48 kPa is deep enough for the runs anyone will set.
+- The pump's 5 V ceiling becomes the rig's ceiling. The firmware already bounds a target at the
+  pump's measured reach, reported as `CONTROL_FLOOR_KPA`, so nothing breaks — a deeper target is
+  refused. The open question is whether 40–48 kPa is deep enough for the runs anyone will set.
 - The sensor's ground must not carry the loads' return. It is a star ground, not a second ground:
   the pump and valve return through the driver's fat wire to the USB ground, the sensor ties
   directly to the MCU's ground with a short wire twisted with its output, and the two paths meet

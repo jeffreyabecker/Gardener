@@ -14,6 +14,19 @@ GARDENER_KNOB_VALID(uint32_t, ControlPeriodMs, GARDENER_CONTROL_PERIOD_MS, 50,
                     GARDENER_CONTROL_PERIOD_MS >= 10 && GARDENER_CONTROL_PERIOD_MS <= 1000,
                     "the control tick is the machine's beat, in milliseconds");
 
+// --- The hold band -----------------------------------------------------------
+// The pump is a switch, so the loop holds a band rather than a setpoint: the pump runs while the
+// chamber is shallower than the target by the lower number, stops once the reading is back inside,
+// and the valve opens when the chamber is deeper than the target by the upper one. Both are
+// percentages of the target, so 5 % either side of 20 kPa holds between 19 and 21.
+GARDENER_KNOB_VALID(float, ControlBelowPercent, GARDENER_CONTROL_BELOW_PERCENT, 5.0f,
+                    GARDENER_CONTROL_BELOW_PERCENT > 0.0f &&
+                        GARDENER_CONTROL_BELOW_PERCENT < 100.0f,
+                    "how far under the target the pump switches on, in percent of it");
+GARDENER_KNOB_VALID(float, ControlAbovePercent, GARDENER_CONTROL_ABOVE_PERCENT, 5.0f,
+                    GARDENER_CONTROL_ABOVE_PERCENT > 0.0f,
+                    "how far past the target the valve opens, in percent of it");
+
 // --- The rig's own numbers ---------------------------------------------------
 // What a different pump, chamber or valve changes. These are facts about the build rather than
 // preferences a running device holds, so each is a knob: the value here is the fitted rig's,
@@ -25,22 +38,14 @@ GARDENER_KNOB_VALID(uint32_t, ControlPeriodMs, GARDENER_CONTROL_PERIOD_MS, 50,
 // arduino-cli's build options: changing one throws away every object in the build path, the
 // precompiled archives included. The sketch folder is on the include path of every translation
 // unit, so a header in it reaches the knobs that read these numbers and no others.
-GARDENER_KNOB_VALID(float, PumpFlowLpm, GARDENER_PUMP_FLOW_LPM, 1.0f, GARDENER_PUMP_FLOW_LPM > 0.0f,
-                    "PumpFlowLpm must be positive, in L/min");
-GARDENER_KNOB_VALID(float, ChamberVolumeL, GARDENER_CHAMBER_VOLUME_L, 0.05f,
-                    GARDENER_CHAMBER_VOLUME_L > 0.0f, "ChamberVolumeL must be positive, in litres");
 GARDENER_KNOB_VALID(float, ControlFloorKpa, GARDENER_CONTROL_FLOOR_KPA, 60.0f,
                     GARDENER_CONTROL_FLOOR_KPA > 0.0f && GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
                     "the floor stays inside the sensor's range");
-GARDENER_KNOB_VALID(float, PumpDutyMaxPercent, GARDENER_PUMP_DUTY_MAX_PERCENT, 90.0f,
-                    GARDENER_PUMP_DUTY_MAX_PERCENT > 0.0f &&
-                        GARDENER_PUMP_DUTY_MAX_PERCENT <= 100.0f,
-                    "PumpDutyMaxPercent is a percentage of full duty");
-GARDENER_KNOB_VALID(float, ControlDeadbandKpa, GARDENER_CONTROL_DEADBAND_KPA, 0.2f,
-                    GARDENER_CONTROL_DEADBAND_KPA > 0.0f,
-                    "ControlDeadbandKpa must be positive, in kPa");
-GARDENER_KNOB_VALID(bool, ValveNormallyOpen, GARDENER_VALVE_NORMALLY_OPEN, true, true,
-                    "the fitted solenoid is normally open: de-energised vents");
+// The part fitted to this rig is normally closed: the coil has to be energised to vent, and a
+// power loss seals the chamber instead of releasing it. Building with this false is what inverts
+// that, and it is the one place the rig's valve is named.
+GARDENER_KNOB_VALID(bool, ValveNormallyOpen, GARDENER_VALVE_NORMALLY_OPEN, false, true,
+                    "true only for a normally open solenoid: de-energised vents");
 
 // --- The deadline on a run --------------------------------------------------
 // The longest hold the machine will grant, and the most a start may ask for: the same two hours the
@@ -50,56 +55,9 @@ GARDENER_KNOB_VALID(uint32_t, ControlMaxRunMs, GARDENER_CONTROL_MAX_RUN_MS, 7200
                     GARDENER_CONTROL_MAX_RUN_MS >= 1000 && GARDENER_CONTROL_MAX_RUN_MS <= 86400000,
                     "a run is bounded by a day");
 
-// --- PID configuration from the pump and the chamber ------------------------
-// The loop's shape, rig-independent: the proportional correction time, the derivative's damping
-// fraction at full slew, the integrator time and the integral clamp. These are tuned once, not per
-// rig; the values reproduce the loop as it was hand-tuned for the reference pump and chamber.
-GARDENER_KNOB_VALID(float, PidResponseS, GARDENER_PID_RESPONSE_S, 0.1f,
-                    GARDENER_PID_RESPONSE_S > 0.0f,
-                    "a response time of zero divides the proportional gain");
-GARDENER_KNOB_VALID(float, PidDampFraction, GARDENER_PID_DAMP_FRACTION, 0.17f,
-                    GARDENER_PID_DAMP_FRACTION >= 0.0f && GARDENER_PID_DAMP_FRACTION <= 1.0f,
-                    "the damping fraction is of full slew");
-GARDENER_KNOB_VALID(float, PidIntegralTimeS, GARDENER_PID_INTEGRAL_TIME_S, 150.0f,
-                    GARDENER_PID_INTEGRAL_TIME_S > 0.0f,
-                    "an integrator time of zero divides the integral gain");
-GARDENER_KNOB_VALID(float, PidIntegralLimitPercent, GARDENER_PID_INTEGRAL_LIMIT_PERCENT, 150.0f,
-                    GARDENER_PID_INTEGRAL_LIMIT_PERCENT > 0.0f,
-                    "the integral clamp is a percentage of duty");
-
-// The four gains the loop runs with, in the units `VacuumSystem::pidUpdate` consumes.
-struct PidGains {
-  float kp;
-  float ki;
-  float kd;
-  float integralLimit;
-};
-
-// The one function of the two numbers: the rate the depth rises at full duty near ambient, in
-// kPa/s, is the pump's free flow times ambient pressure over the volume, which is the same slew
-// the derivative term measures. Each gain scales against it, so the loop keeps its shape
-// whatever pump and chamber are fitted.
-inline PidGains pidGainsFor(float flowLpm, float volumeL) {
-  const float slewKpaPerSec = 101.325f * flowLpm / (60.0f * volumeL);
-  PidGains gains;
-  gains.kp = 100.0f / (PidResponseS * slewKpaPerSec);
-  gains.ki = gains.kp / PidIntegralTimeS;
-  gains.kd = PidDampFraction * 100.0f / slewKpaPerSec;
-  gains.integralLimit = PidIntegralLimitPercent;
-  return gains;
-}
-
-// --- Pump limits the control loop must respect -------------------------------
-// The duty cap (`PumpDutyMaxPercent`, a rig number) keeps the pump inside its own rating; a run
-// is ended by its deadline or by a fault, and both are the vacuum system's.
-GARDENER_KNOB_VALID(float, PumpRampPercentPerSec, GARDENER_PUMP_RAMP_PERCENT_PER_SEC, 150.0f,
-                    GARDENER_PUMP_RAMP_PERCENT_PER_SEC > 0.0f,
-                    "the ramp is a percentage of duty per second");
-
 // --- Vent valve --------------------------------------------------------------
 // Timing only; which part is fitted, and therefore which coil level means "open", is the
-// composition root's call in Machine.cpp from the ValveNormallyOpen knob — normally open
-// is the fail-safe default.
+// composition root's call in Machine.cpp from the ValveNormallyOpen knob.
 GARDENER_KNOB_VALID(float, VentMarginKpa, GARDENER_VENT_MARGIN_KPA, 2.0f,
                     GARDENER_VENT_MARGIN_KPA >= 0.0f,
                     "close enough to the vent floor to be released, in kPa");
@@ -122,32 +80,29 @@ GARDENER_KNOB_VALID(float, VentTargetLeadKpa, GARDENER_VENT_TARGET_LEAD_KPA, 1.0
                     GARDENER_VENT_TARGET_LEAD_KPA >= 0.0f,
                     "how far deeper than the target the valve closes, in kPa");
 // The loop's own faults ---------------------------------------------------
-// A pull driven hard against a blocked hose or a stuck sensor moves nothing, and a depth that runs
-// past its target is the loop not holding what it was asked to. Both are the machine's to notice,
-// because a controller that has stopped talking is exactly when they matter.
+// A pull driven hard against a blocked hose or a stuck sensor moves nothing, which is the pump's to
+// notice. A depth past its target the loop vents back from, so the overshoot is a fault only for a
+// run that keeps needing that: a reading that will not come back is the one thing venting cannot
+// fix. Both are the machine's to notice, because a controller that has stopped talking is exactly
+// when they matter.
 GARDENER_KNOB_VALID(float, ControlProgressKpa, GARDENER_CONTROL_PROGRESS_KPA, 1.0f,
                     GARDENER_CONTROL_PROGRESS_KPA > 0.0f,
                     "headway that counts as a pull making progress, in kPa");
 GARDENER_KNOB_VALID(uint32_t, ControlProgressTimeoutMs, GARDENER_CONTROL_PROGRESS_TIMEOUT_MS, 10000,
                     GARDENER_CONTROL_PROGRESS_TIMEOUT_MS > 0,
                     "how long a pull may make no progress before it faults");
-GARDENER_KNOB_VALID(float, ControlProgressDutyFraction, GARDENER_CONTROL_PROGRESS_DUTY_FRACTION,
-                    0.5f,
-                    GARDENER_CONTROL_PROGRESS_DUTY_FRACTION > 0.0f &&
-                        GARDENER_CONTROL_PROGRESS_DUTY_FRACTION <= 1.0f,
-                    "the fraction of the duty cap that counts as driving a pull");
-GARDENER_KNOB_VALID(float, ControlOvershootKpa, GARDENER_CONTROL_OVERSHOOT_KPA, 5.0f,
-                    GARDENER_CONTROL_OVERSHOOT_KPA > 0.0f,
-                    "deeper than the target is past it, in kPa");
 GARDENER_KNOB_VALID(uint8_t, ControlOvershootReadings, GARDENER_CONTROL_OVERSHOOT_READINGS, 5,
                     GARDENER_CONTROL_OVERSHOOT_READINGS > 0,
-                    "how many readings past the target count as an overshoot");
+                    "how many readings past the band count as an overshoot");
+GARDENER_KNOB_VALID(uint8_t, ControlOvershootRecoveries, GARDENER_CONTROL_OVERSHOOT_RECOVERIES, 3,
+                    GARDENER_CONTROL_OVERSHOOT_RECOVERIES > 0,
+                    "how many vent-back recoveries a run allows before an overshoot faults");
 
 // The pins the machine's parts are wired to. The sketch names them and the composition builds the
 // parts from them, so this library carries no board: a different rig is a different set of numbers.
 struct MachinePins {
   uint8_t sensorAdc;
-  uint8_t pumpPwm;
+  uint8_t pump;
   uint8_t ventValve;
 };
 

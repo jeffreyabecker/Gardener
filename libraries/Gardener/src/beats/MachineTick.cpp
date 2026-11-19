@@ -13,9 +13,8 @@ void MachineTick::tick(uint32_t nowMs) {
   // Commands first, against the machine as the last tick left it.
   drainCommands();
 
-  // The devices and the PID on the fixed beat, then the run log.
+  // The devices and the loop on the fixed beat, then the run log.
   vacuum_.sensor().update(nowMs);
-  vacuum_.pump().update(nowMs);
   vacuum_.service(nowMs);
   logRunChanges(nowMs);
 }

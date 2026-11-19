@@ -17,30 +17,22 @@
 
 namespace gardener::test {
 
-// The pump: the duty it was last asked for, and whether it was told to stop or halt. An optional
-// event log records the calls in the order they came, which is how a case checks that a release
-// stops the pump before it opens the valve.
+// The pump: whether it is being driven, and the calls in the order the loop made them. An optional
+// event log is how a case checks that a release stops the pump before it opens the valve.
 class FakePump : public Pump {
  public:
   explicit FakePump(std::vector<std::string>* events = nullptr) : events_(events) {}
 
-  bool begin() override { return true; }
-  void update(uint32_t) override {}
-  void setDuty(float percent) override {
-    duty_ = percent;
-    note("pump.duty");
+  void begin() override {}
+  void on() override {
+    on_ = true;
+    note("pump.on");
   }
-  void stop() override {
-    duty_ = 0.0f;
-    note("pump.stop");
+  void off() override {
+    on_ = false;
+    note("pump.off");
   }
-  void halt() override {
-    duty_ = 0.0f;
-    note("pump.halt");
-  }
-  float dutyPercent() const override { return duty_; }
-
-  float duty() const { return duty_; }
+  bool active() const override { return on_; }
 
  private:
   void note(const char* what) {
@@ -48,7 +40,7 @@ class FakePump : public Pump {
   }
 
   std::vector<std::string>* events_;
-  float duty_ = 0.0f;
+  bool on_ = false;
 };
 
 // The sensor: a depth a case sets, and flags for the two ways it goes quiet.

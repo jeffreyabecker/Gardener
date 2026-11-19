@@ -1,6 +1,6 @@
 #include "MachineRoot.h"
 
-#include "core/hal/PwmPump.h"
+#include "core/hal/GpioPump.h"
 #include "core/hal/SolenoidValve.h"
 #include "core/hal/XgzpSensor.h"
 
@@ -11,7 +11,7 @@ MachineParts buildMachineParts(const MachinePins& pins) {
                          ? static_cast<VentValve*>(new NormallyOpenValve(pins.ventValve))
                          : static_cast<VentValve*>(new NormallyClosedValve(pins.ventValve));
   MachineParts parts{
-      new PwmPump(pins.pumpPwm, PumpDutyMaxPercent, PumpRampPercentPerSec),
+      new GpioPump(pins.pump),
       new AnalogSensor(pins.sensorAdc),
       valve,
   };

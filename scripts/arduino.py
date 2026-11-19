@@ -15,15 +15,15 @@ the write is skipped while the folder is unchanged, because the partition also h
 the board stored and rewriting it would clear that. A page edit does rewrite it, and the board
 comes back as its setup access point.
 
-`--define NAME=VALUE` sets one of the rig's own numbers, and repeats. `PUMP_FLOW_LPM`,
-`CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`, `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and
-`VALVE_NORMALLY_OPEN` default to the reference rig in `libraries/Gardener/src/machine/Machine.h`,
-and a build for a different pump, chamber or valve overrides them here: they are written to the
-sketch's `rig_options.h`, which every `GARDENER_KNOB_VALID` in the tree reads through
-`core/Knob.h`. The name here is the knob's token without its `GARDENER_` prefix.
+`--define NAME=VALUE` sets one of the rig's own numbers, and repeats. `CONTROL_FLOOR_KPA`,
+`CONTROL_BELOW_PERCENT`, `CONTROL_ABOVE_PERCENT` and `VALVE_NORMALLY_OPEN` default to the reference
+rig in `libraries/Gardener/src/machine/Machine.h`, and a build for a different pump, chamber or
+valve overrides them here: they are written to the sketch's `rig_options.h`, which every
+`GARDENER_KNOB_VALID` in the tree reads through `core/Knob.h`. The name here is the knob's token
+without its `GARDENER_` prefix.
 
     python scripts/arduino.py --task upload --port COM5
-    python scripts/arduino.py --task build --define PUMP_FLOW_LPM=2.0f --define CHAMBER_VOLUME_L=0.25f
+    python scripts/arduino.py --task build --define CONTROL_FLOOR_KPA=55.0f
 """
 
 import argparse
@@ -311,7 +311,7 @@ def main():
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
     parser.add_argument("--define", action="append", default=[], metavar="NAME=VALUE",
-                        help="a build symbol for the rig's own numbers, e.g. PUMP_FLOW_LPM=2.0f; "
+                        help="a build symbol for the rig's own numbers, e.g. CONTROL_FLOOR_KPA=55.0f; "
                              "repeatable")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
     args = parser.parse_args()

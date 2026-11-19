@@ -133,8 +133,8 @@ board decision and not part of the 5 V build.
 
 The same machine on a bench supply. The MCU, sensor, panel, buttons, valve and firmware are the
 5 V build's; the pump, its drive, the supply and the two bucks are different. The firmware does
-not know which pump it is driving: `PwmPump` owns one LEDC channel at 20 kHz and the low-side
-switch does the rest, so GPIO8 and the duty mean the same thing on either rail.
+not know which pump it is driving: `GpioPump` closes one low-side switch and the pump does the
+rest, so GPIO8 means the same thing on either rail.
 
 ### What differs
 
@@ -244,15 +244,14 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
   pump's ultimate vacuum on its datasheet; a single-stage diaphragm pump lands inside the sensor,
   a two-stage one may not.
 * The pump's measured reach is `CONTROL_FLOOR_KPA`, so build with it once you have measured it —
-  `--define CONTROL_FLOOR_KPA=<kPa>` — and `--define VALVE_NORMALLY_OPEN=0` if the fitted valve is
-  normally closed. The PID gains are derived from the pump's free flow and the chamber volume, so a
-  new pump or chamber is retuned by the two build symbols `PUMP_FLOW_LPM` and `CHAMBER_VOLUME_L`,
-  not by re-deriving gains. The duty cap is `PUMP_DUTY_MAX_PERCENT`; the default 90 % is 10.8 V
-  here, keep it unless the pump's datasheet allows continuous 12 V.
-  `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a step. Every one of these
-  is a knob named without its `GARDENER_` prefix — the preprocessor token behind `--define
-  PUMP_FLOW_LPM` is `GARDENER_PUMP_FLOW_LPM` — so `core/knob_defaults.h` is where a default is
-  read.
+  `--define CONTROL_FLOOR_KPA=<kPa>`. The fitted valve is normally closed, so it is energised to
+  vent and a power loss seals the chamber; `--define VALVE_NORMALLY_OPEN=1` inverts that for a
+  normally open part, which is the fail-safe direction but holds no vacuum through a power loss.
+  The pump is a switch: the loop runs it flat out or not at all and holds a band of
+  `CONTROL_BELOW_PERCENT` under the target and `CONTROL_ABOVE_PERCENT` over it, so how tightly a
+  build holds is those two numbers rather than a gain. Every one of these is a knob named without
+  its `GARDENER_` prefix — the preprocessor token behind `--define CONTROL_FLOOR_KPA` is
+  `GARDENER_CONTROL_FLOOR_KPA` — so `core/knob_defaults.h` is where a default is read.
 * The MCU's 5V pin is the 12 V → 5 V buck's output. Check the Super Mini for a Schottky between
   USB VBUS and that pin; if it has none, use a cable with VBUS cut or unplug USB while the 12 V is
   on. Two 5 V sources on one pin is not a fault the board protects you from.

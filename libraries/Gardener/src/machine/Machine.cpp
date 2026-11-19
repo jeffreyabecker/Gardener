@@ -19,28 +19,20 @@ void Machine::boot() {
   logger_.info(boot.c_str());
 
   const bool sensorOk = vacuum_.sensor().begin();
-  const bool pumpOk = vacuum_.pump().begin();
+  vacuum_.pump().begin();
   vacuum_.vent().begin();
   vacuum_.begin();
 
   logger_.info(sensorOk ? "sensor: online" : "sensor: not found");
-  logger_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
 
-  // The loop the build describes: the two rig numbers and the gains they derive, one line so a
-  // bench read can confirm the loop the device will run.
-  const PidGains gains = pidGainsFor(PumpFlowLpm, ChamberVolumeL);
-  String pid = "pid: flow ";
-  pid += String(PumpFlowLpm, 2u);
-  pid += " lpm, chamber ";
-  pid += String(ChamberVolumeL, 3u);
-  pid += " l, kp=";
-  pid += String(gains.kp, 2u);
-  pid += " ki=";
-  pid += String(gains.ki, 3u);
-  pid += " kd=";
-  pid += String(gains.kd, 2u);
-  logger_.info(pid.c_str());
+  // The band the build holds, one line so a bench read can confirm the loop the device will run.
+  String band = "band: -";
+  band += String(ControlBelowPercent, 1u);
+  band += "% +";
+  band += String(ControlAbovePercent, 1u);
+  band += "% of target";
+  logger_.info(band.c_str());
 }
 
 }  // namespace gardener

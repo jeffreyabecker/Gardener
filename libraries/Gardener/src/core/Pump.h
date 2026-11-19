@@ -1,31 +1,24 @@
 #pragma once
 
-#include <stdint.h>
-
 namespace gardener {
 
-// The pump: the one actuator the control loop has, so the vacuum system can pull down and never vent.
+// The pump: the one actuator the control loop has, so the vacuum system can pull down and never
+// vent. It is a switch and nothing more: the fitted diaphragm pump does not meter, so the loop runs
+// it flat out or not at all, and the chamber's leak is what takes the depth back down.
 //
-// This is the interface the vacuum system holds, in the same shape as gfx::DisplayDevice: what the
-// loop needs a pump to do, with no pins and no PWM in it. What drives a pump on this rig — an LEDC
-// channel into a low side MOSFET — is in core/hal/, along with the duty cap and the slew limit,
-// because those are properties of the part rather than of the loop.
+// This is the interface the vacuum system holds. What drives a pump on this rig — one GPIO into a
+// low side MOSFET — is in core/hal/.
 class Pump {
  public:
   virtual ~Pump() = default;
 
-  // False when the PWM channel could not be attached, so the caller can say so at boot.
-  virtual bool begin() = 0;
-  // Ramps the output toward whatever duty was last requested.
-  virtual void update(uint32_t nowMs) = 0;
+  virtual void begin() = 0;
+  virtual void on() = 0;
+  virtual void off() = 0;
 
-  // The loop's request, in percent. Zero is a request, not a stop: it ramps down like any other.
-  virtual void setDuty(float percent) = 0;
-  virtual void stop() = 0;
-  // Cut the output now, without the ramp. What a fault asks for.
-  virtual void halt() = 0;
-
-  virtual float dutyPercent() const = 0;
+  // True while the pump is being driven. It is what the loop reads to know where it left the
+  // actuator, and what the wire reports as the duty.
+  virtual bool active() const = 0;
 };
 
 }  // namespace gardener

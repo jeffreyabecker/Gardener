@@ -20,11 +20,11 @@ there.
 
 ## Thermal and continuous-duty protection
 
-`PumpDutyMaxPercent` is a duty cap, not a thermal limit: a long hold at the top of the range can
-overheat the pump. A maximum continuous run, a derating curve, or a current or temperature sense
-would cover it. Blocked by: nothing on the rig senses temperature or pump current, and neither pump
-has a measured continuous-duty figure to set a body-safe default from. The two-hour ceiling on a run
-is the whole of the protection there is.
+A run drives the pump flat out for its whole length, and nothing limits it: a long hold can overheat
+the pump. A maximum continuous run, a derating curve, or a current or temperature sense would cover
+it. Blocked by: nothing on the rig senses temperature or pump current, and neither pump has a
+measured continuous-duty figure to set a body-safe default from. The two-hour ceiling on a run is
+the whole of the protection there is.
 
 ## Low-battery start refusal
 

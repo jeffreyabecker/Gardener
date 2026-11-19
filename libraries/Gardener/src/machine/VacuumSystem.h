@@ -14,7 +14,7 @@ namespace gardener {
 // bus stay in the parts and this file stays the control law.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
-// true: the pressure, the duty, the state. The state is the vacuum system's own, because both of the
+// true: the pressure, the pump, the state. The state is the vacuum system's own, because both of the
 // things that advance it are facts about the chamber rather than orders: the target has been
 // reached, and the release is over. So each command sets the state it causes and service()
 // moves the other two, which keeps one machine with one state.
@@ -27,18 +27,19 @@ namespace gardener {
 // currentPressureKpa() is how deep the chamber is now. The reference is the sensor's own — the part takes
 // it when it comes up — so it cancels out of every comparison against a target.
 //
-// The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
-// can pull down but never vent; the valve is the only way back toward ambient, which is why every
-// release path here stops the pump before it opens the valve. A target set shallower than the
-// chamber while a run is active uses the same actuator: the valve opens until the new target is
-// reached, then the run carries on. Gains live in Machine.h.
+// The loop is a relay on the band either side of that relative pressure, with the pump as the only
+// actuator: on while the chamber is shallower than the lower edge, off once it is inside, and the
+// leak takes it back. The valve is the only way back toward ambient, which is why every release
+// path here stops the pump before it opens the valve, and why a target set shallower than the
+// chamber is reached by venting to it. A depth the pump has overshot past the upper edge is vented
+// back to the target the same way, so the run creeps up on the band rather than latching.
 class VacuumSystem {
  public:
   VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent)
       : pump_(pump), sensor_(sensor), vent_(vent) {}
 
   void begin();                  // pump off, valve open: the safe resting state
-  void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
+  void service(uint32_t nowMs);  // the state machine, the pump and the fault detection
 
   // --- commands -----------------------------------------------------------
   // Every command ends in one decision — given the stored target, the state and the reading, the
@@ -63,8 +64,8 @@ class VacuumSystem {
   RunState runState() const { return state_; }
   float targetPressureKpa() const { return targetPressureKpa_; }
   const char* faultCode() const { return faultCode_; }
-  // The pump's commanded duty, as the loop last left it.
-  float dutyPercent() const { return pump_->dutyPercent(); }
+  // The pump's state as the wire reports it: full while it is being driven, zero while it is not.
+  float dutyPercent() const { return pump_->active() ? 100.0f : 0.0f; }
 
   // True while a run is being maintained: pulling, holding, or venting to a shallower target. A
   // release is not a run, so a stopped machine reads false while it vents.
@@ -88,19 +89,19 @@ class VacuumSystem {
   bool released() const;  // settled at the vent floor
   // The one decision every command ends in: open the valve, close it, or run the pump.
   void converge();
-  void release();          // stop, then open: the one release path
-  void rest();             // the resting state without releasing: pump off, valve open
-  void closeValve();       // seal the chamber and hand it to the PID
-  void beginTargetVent();  // stop, open, and land on the current target
+  void release();     // stop, then open: the one release path
+  void rest();        // the resting state without releasing: pump off, valve open
+  void closeValve();  // seal the chamber and hand it to the loop
+  // Stop, open, and land at the target, or at a lead deeper than it so the travel after the coil
+  // drops covers the rest. An overshoot recovery lands at the target, just past it, where the pump
+  // can take it back up.
+  void beginTargetVent(bool deep);
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
   // The latch is the fault code: empty means nothing is latched, so there is no second flag to
   // keep in step with it, and nothing but resetFault() clears it.
   bool faulted() const { return faultCode_[0] != '\0'; }
-
-  void pidReset() { pidIntegral_ = 0.0f; }
-  float pidUpdate(float dt, float error, float measurementSlew);
 
   Pump* pump_;
   PressureSensor* sensor_;
@@ -111,22 +112,19 @@ class VacuumSystem {
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
   // VENT is either a release to ambient or a controlled vent to the current target; this is what
-  // tells them apart when the end is decided.
+  // tells them apart when the end is decided, and where the controlled vent closes.
   bool ventingToTarget_ = false;
+  bool ventLandingDeep_ = false;
 
   // The run's deadline: when it began, the hold granted to it, and whether it has expired.
   uint32_t runStartMs_ = 0;
   uint32_t holdMs_ = 0;
   bool deadlineExpired_ = false;
-  // The pull's headway: the best depth it has reached, and when it last improved.
+  // The pump's headway: the best depth it has reached since it came on, and when it last improved.
   uint32_t progressMs_ = 0;
   float bestDepthKpa_ = 0.0f;
   uint8_t overshootReadings_ = 0;
-
-  float pidIntegral_ = 0.0f;
-  float lastMeasured_ = 0.0f;
-  float output_ = 0.0f;
-  uint32_t lastControlMs_ = 0;
+  uint8_t overshootRecoveries_ = 0;
 };
 
 }  // namespace gardener

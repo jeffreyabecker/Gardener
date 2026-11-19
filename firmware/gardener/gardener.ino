@@ -16,7 +16,7 @@ namespace {
 // nothing else.
 constexpr gardener::MachinePins Board{
     .sensorAdc = 5,
-    .pumpPwm = 8,
+    .pump = 8,
     .ventValve = 9,
 };
 
