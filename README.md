@@ -14,14 +14,15 @@ device has, over the serial link and the web link it builds.
 
 ## Wire
 
-Four verbs for the machine on a line ending in LF, and one word for the network:
+Every line on the port ends in LF and begins with a prefix: `sys` is the machine's, `wifi` is the
+network's, and a build serves exactly the prefixes it registers.
 
 | command | answer |
 | --- | --- |
-| `get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
-| `set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
-| `vent` | `ok state=VENT` |
-| `reset` | `ok state=IDLE` — clears a latched fault |
+| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `sys set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
+| `sys vent` | `ok state=VENT` |
+| `sys reset` | `ok state=IDLE` — clears a latched fault |
 | `wifi` | `ok ssid=<name> mode=<sta\|ap\|ap+sta> ip=<address> keep_ap=<0\|1>` |
 | `wifi scan` | `ok count=<n>`, then one line per network: `ssid0=<name> rssi0=<dBm>` |
 | `wifi ssid <name>` | `ok ssid=<name>` — the rest of the line is the name, and it is stored |
@@ -30,11 +31,14 @@ Four verbs for the machine on a line ending in LF, and one word for the network:
 | `wifi join` | the status line, after the stored network is applied |
 | `wifi forget` | the status line, after the stored network is cleared |
 
+A first word nothing serves is `err unknown_prefix <word>`, and a word under a registered prefix
+that its plugin does not know is `err bad_argument <word>`.
+
 A set is a target and a run in one command, and the run is granted the machine's own ceiling
-(two hours). Zero is the ambient target, which releases the chamber, so `set 0` and `set -` vent.
-A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready` when
-the machine has no reading or a latched fault. The boot and run lines the firmware logs share the
-same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
+(two hours). Zero is the ambient target, which releases the chamber, so `sys set 0` and `sys set -`
+vent. A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready`
+when the machine has no reading or a latched fault. The boot and run lines the firmware logs share
+the same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
 
 The network is set a field at a time, and `wifi join` is what applies what is stored; a join with
 nothing stored is `err no_network`. Each field is written to the board's filesystem as it is given,
@@ -46,7 +50,7 @@ cannot carry a street's worth of names in one write.
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
 unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z>
-fault=<code|none>`, the `get` fields without the `ok` — so a controller can tell a quiet machine
+fault=<code|none>`, the `sys get` fields without the `ok` — so a controller can tell a quiet machine
 from a dead one without polling. Its own word keeps it clear of the replies a controller is waiting
 for. Every status line carries `uptime_ms`, the milliseconds since boot at the instant the reading
 was copied, so a controller can place two of them in time.

@@ -1,4 +1,4 @@
-// The machine's commands: the field list `get` publishes, the bounds `set` holds its
+// The machine's commands: the field list `sys get` publishes, the bounds `sys set` holds its
 // argument to, the run a set queues, and the refusals it answers. They run over the machine's real
 // VacuumSystem with the parts faked, because the answers are the loop's state.
 
@@ -12,11 +12,11 @@
 #include "Clock.h"
 #include "TextStream.h"
 #include "fakes/Parts.h"
-#include "fakes/Wifi.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
 #include "machine/SystemControl.h"
 #include "serial/SerialLink.h"
+#include "serial/SystemCommands.h"
 
 namespace {
 
@@ -24,12 +24,12 @@ using gardener::CommandQueue;
 using gardener::Machine;
 using gardener::MachineCommand;
 using gardener::SerialLink;
+using gardener::SystemCommands;
 using gardener::SystemControl;
 using gardener::host::TextStream;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
-using gardener::test::FakeWifi;
 using gardener::test::RecordingLogger;
 
 // The queue the link posts into: everything fits, so a case reads back what the grammar queued.
@@ -57,10 +57,11 @@ class OpenQueue : public CommandQueue {
 // The machine the wire is built over, one per case, with a clock that starts at zero.
 struct Bench {
   Bench()
-      : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue),
-        link(io, nullptr, logger, control, wifi) {
+      : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue), system(control),
+        link(io, nullptr, logger) {
     gardener::host::reset();
     machine.boot();
+    link.add(system);
     link.begin();
   }
 
@@ -75,11 +76,11 @@ struct Bench {
   FakePump pump;
   FakeSensor sensor;
   FakeValve valve;
-  FakeWifi wifi;
   RecordingLogger logger;
   OpenQueue queue;
   Machine machine;
   SystemControl control;
+  SystemCommands system;
   TextStream io;
   SerialLink link;
 };
@@ -92,7 +93,7 @@ bool contains(const std::string& text, const char* part) {
 
 TEST_CASE("get answers the pressure to two decimals and the rest to one") {
   Bench bench;
-  bench.send("get\n");
+  bench.send("sys get\n");
   const std::string reply = bench.reply();
   CHECK(contains(reply, "ok uptime_ms=0 "));
   CHECK(contains(reply, " pressure_kpa=0.00 "));
@@ -103,13 +104,13 @@ TEST_CASE("get answers the pressure to two decimals and the rest to one") {
 TEST_CASE("get stamps the reply with the uptime it was taken at") {
   Bench bench;
   gardener::host::advance(250);
-  bench.send("get\n");
+  bench.send("sys get\n");
   CHECK(contains(bench.reply(), "ok uptime_ms=250 "));
 }
 
 TEST_CASE("get answers the state and the fault") {
   Bench bench;
-  bench.send("get\n");
+  bench.send("sys get\n");
   const std::string reply = bench.reply();
   CHECK(contains(reply, " state="));
   CHECK(contains(reply, " fault=none\n"));
@@ -118,7 +119,7 @@ TEST_CASE("get answers the state and the fault") {
 TEST_CASE("a set inside the range queues the target and a start") {
   Bench bench;
   bench.sensor.read(12.0f);
-  bench.send("set 5\n");
+  bench.send("sys set 5\n");
   CHECK_EQ(bench.reply(), std::string("ok target=5.0 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
@@ -132,9 +133,9 @@ TEST_CASE("a set inside the range queues the target and a start") {
 
 TEST_CASE("the ambient target is zero and the shorthand dash, and both release") {
   Bench bench;
-  bench.send("set 0\n");
+  bench.send("sys set 0\n");
   CHECK_EQ(bench.reply(), std::string("ok target=0.0 state=VENT\n"));
-  bench.send("set -\n");
+  bench.send("sys set -\n");
   CHECK_EQ(bench.reply(), std::string("ok target=0.0 state=VENT\n"));
 
   MachineCommand command{MachineCommand::Op::Start};
@@ -148,39 +149,39 @@ TEST_CASE("the ambient target is zero and the shorthand dash, and both release")
 TEST_CASE("the floor itself is an accepted target") {
   Bench bench;
   bench.sensor.read(12.0f);
-  bench.send("set 60\n");
+  bench.send("sys set 60\n");
   CHECK_EQ(bench.reply(), std::string("ok target=60.0 state=PULL\n"));
 }
 
 TEST_CASE("a target below ambient is refused with its minimum") {
   Bench bench;
-  bench.send("set -1\n");
+  bench.send("sys set -1\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=-1 min=0.0\n"));
   CHECK(bench.queue.empty());
 }
 
 TEST_CASE("a target that is not a number is refused with its minimum") {
   Bench bench;
-  bench.send("set nan\n");
+  bench.send("sys set nan\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=nan min=0.0\n"));
 }
 
 TEST_CASE("a target past the floor is refused with its maximum") {
   Bench bench;
-  bench.send("set 60.1\n");
+  bench.send("sys set 60.1\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=60.1 max=60.0\n"));
 }
 
 TEST_CASE("a second target token is refused by name") {
   Bench bench;
-  bench.send("set 5 6\n");
+  bench.send("sys set 5 6\n");
   CHECK_EQ(bench.reply(), std::string("err bad_argument 6\n"));
   CHECK(bench.queue.empty());
 }
 
 TEST_CASE("a set with no reading refuses and queues nothing") {
   Bench bench;
-  bench.send("set 40\n");
+  bench.send("sys set 40\n");
   CHECK_EQ(bench.reply(), std::string("err not_ready no_reading\n"));
   CHECK(bench.queue.empty());
 }
@@ -196,7 +197,7 @@ TEST_CASE("a latched fault refuses a set") {
   bench.machine.vacuum().service(gardener::host::nowMs());
   REQUIRE_EQ(std::string(bench.machine.vacuum().faultCode()), std::string("sensor"));
 
-  bench.send("set 40\n");
+  bench.send("sys set 40\n");
   CHECK_EQ(bench.reply(), std::string("err not_ready latch\n"));
 }
 
@@ -204,7 +205,7 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
   Bench bench;
   bench.sensor.read(12.0f);
 
-  bench.send("set 40\n");
+  bench.send("sys set 40\n");
   CHECK_EQ(bench.reply(), std::string("ok target=40.0 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
@@ -218,23 +219,23 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
 
 TEST_CASE("vent answers the release it queues") {
   Bench bench;
-  bench.send("vent\n");
+  bench.send("sys vent\n");
   CHECK_EQ(bench.reply(), std::string("ok state=VENT\n"));
   CHECK_FALSE(bench.queue.empty());
 }
 
 TEST_CASE("reset answers the idle state it queues") {
   Bench bench;
-  bench.send("reset\n");
+  bench.send("sys reset\n");
   CHECK_EQ(bench.reply(), std::string("ok state=IDLE\n"));
   CHECK_FALSE(bench.queue.empty());
 }
 
 TEST_CASE("a refused set leaves the queue empty and a queued one fills it") {
   Bench bench;
-  bench.send("set 40\n");
+  bench.send("sys set 40\n");
   CHECK(bench.queue.empty());
   bench.sensor.read(12.0f);
-  bench.send("set 40\n");
+  bench.send("sys set 40\n");
   CHECK_EQ(bench.queue.count(), static_cast<size_t>(2));
 }

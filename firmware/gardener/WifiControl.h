@@ -21,8 +21,8 @@ struct WifiStatus {
 };
 
 // What a front end may ask of the network. The radio is the board's and lives in the sketch, so this
-// is the seam a link holds rather than an implementation: the wire and the page both reach the one
-// web link through it.
+// is the seam a front end holds rather than an implementation: the wire's wifi plugin and the page
+// both reach the one web link through it.
 class WifiControl {
  public:
   virtual ~WifiControl() = default;

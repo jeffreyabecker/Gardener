@@ -5,7 +5,7 @@
 #include <esp_http_server.h>
 #include <stdint.h>
 
-#include "core/WifiControl.h"
+#include "WifiControl.h"
 
 namespace gardener {
 class Logger;
@@ -25,7 +25,7 @@ namespace gardener::runtime {
 // or a second page is a file in the folder rather than a rebuild. The network choice is a file in
 // the same partition, at the filesystem root where no URI can reach it.
 //
-// Every machine call goes through the same SystemControl the serial grammar uses; the results are
+// Every machine call goes through the same SystemControl the serial wire asks; the results are
 // this link's own wording, form-encoded, because a form body is what a browser page reads back
 // without a parser.
 //
@@ -33,8 +33,8 @@ namespace gardener::runtime {
 // task begin() starts, because DNSServer has no task of its own. The HTTP handlers run on the
 // httpd's, and only ever read the control or post into its queue.
 //
-// The network half of that control is WifiControl, which the serial link holds as well: one radio,
-// reached from the page and from the wire.
+// The network half of that control is WifiControl, which the wire's wifi plugin holds as well: one
+// radio, reached from the page and from the wire.
 class WebLink : public WifiControl {
  public:
   WebLink(SystemControl& control, Logger& logger);

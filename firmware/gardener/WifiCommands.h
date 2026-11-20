@@ -1,18 +1,42 @@
+#pragma once
+
 #include <Arduino.h>
 
-#include "core/WifiControl.h"
-#include "serial/SerialLink.h"
+#include "WifiControl.h"
+#include "serial/CommandPlugin.h"
 
-namespace gardener {
-namespace {
+namespace gardener::runtime {
 
-// How many networks one scan puts on a line.
-constexpr int ScanListMax = 16;
+// The network's lines on the serial wire, under the wifi prefix: the status, the scan that lists
+// what is out there, the stored choice a field at a time, the join that applies it, and the forget
+// that clears it. Every decision behind them is WifiControl's; this plugin only parses and formats.
+//
+// It is a header because the host suite compiles the sketch's platform-free headers and not its
+// sources, and the quoting rules earn their cases: a network name with a space or a quote in it has
+// to survive the reply and the next command.
+class WifiCommands : public CommandPlugin {
+ public:
+  explicit WifiCommands(WifiControl& wifi) : wifi_(wifi) {}
 
-// The wire writes a value bare while it reads back as one token, and quoted when it does not, with
-// the two characters that would end or escape the quote spelled out. A scan is other people's
-// network names, so a name with a quote in it has to survive the reply.
-bool needsQuotes(const String& value) {
+  const char* prefix() const override { return "wifi"; }
+  void serve(Print& io, const String& args) override;
+
+ private:
+  // How many networks one scan puts on a line.
+  static constexpr int ScanListMax = 16;
+
+  // Writes a value bare while it reads back as one token, and quoted when it does not, with the two
+  // characters that would end or escape the quote spelled out.
+  static bool needsQuotes(const String& value);
+  static String quoted(const String& value);
+  static String unquoted(const String& text);
+  static void badArgument(Print& io, const String& token);
+  static void writeStatus(Print& io, const char* prefix, const WifiStatus& status);
+
+  WifiControl& wifi_;
+};
+
+inline bool WifiCommands::needsQuotes(const String& value) {
   if (value.isEmpty()) return true;
   for (unsigned int i = 0; i < value.length(); i++) {
     const char character = value[i];
@@ -21,7 +45,7 @@ bool needsQuotes(const String& value) {
   return false;
 }
 
-String quoted(const String& value) {
+inline String WifiCommands::quoted(const String& value) {
   if (!needsQuotes(value)) return value;
 
   String out = "\"";
@@ -37,7 +61,7 @@ String quoted(const String& value) {
 // A value the way the wire takes one: a surrounding pair of quotes is stripped and its escapes read,
 // so `"My Net"` and the rest of a line that is `My Net` are the same name. Text after a closed pair
 // is not part of it, and an unclosed quote is just a character in the name.
-String unquoted(const String& text) {
+inline String WifiCommands::unquoted(const String& text) {
   String value = text;
   value.trim();
   if (value.length() < 2 || value[0] != '"') return value;
@@ -55,7 +79,17 @@ String unquoted(const String& text) {
   return value;
 }
 
-void writeWifiStatus(Stream& io, const char* prefix, const WifiStatus& status) {
+// The rest of the line is refused the way every other word under the prefix refuses an argument it
+// did not expect.
+inline void WifiCommands::badArgument(Print& io, const String& token) {
+  const int space = token.indexOf(' ');
+  String name = space < 0 ? token : token.substring(0, (unsigned int)space);
+  io.print("err bad_argument ");
+  io.print(name);
+  io.print('\n');
+}
+
+inline void WifiCommands::writeStatus(Print& io, const char* prefix, const WifiStatus& status) {
   String line = prefix;
   line += "ssid=";
   line += quoted(status.ssid);
@@ -69,24 +103,7 @@ void writeWifiStatus(Stream& io, const char* prefix, const WifiStatus& status) {
   io.print(line);
 }
 
-String firstToken(const String& args) {
-  const int space = args.indexOf(' ');
-  return space < 0 ? args : args.substring(0, space);
-}
-
-// The rest of the line is refused the way every other verb refuses an argument it did not expect.
-void badArgument(Stream& io, const String& token) {
-  io.print("err bad_argument ");
-  io.print(firstToken(token));
-  io.print('\n');
-}
-
-}  // namespace
-
-// The network's commands: the stored choice a field at a time, the join that applies it, the scan
-// that lists what is out there, and the status the others answer with. Every decision behind them
-// is the control's; this function only parses and formats.
-void SerialLink::wifiCommand(Stream& io, const String& args) const {
+inline void WifiCommands::serve(Print& io, const String& args) {
   const int space = args.indexOf(' ');
   String word = space < 0 ? args : args.substring(0, (unsigned int)space);
   String rest = space < 0 ? String() : args.substring((unsigned int)space + 1);
@@ -94,7 +111,7 @@ void SerialLink::wifiCommand(Stream& io, const String& args) const {
   word.toLowerCase();
 
   if (word.isEmpty()) {
-    writeWifiStatus(io, "ok ", wifi_.status());
+    writeStatus(io, "ok ", wifi_.status());
     return;
   }
 
@@ -177,7 +194,7 @@ void SerialLink::wifiCommand(Stream& io, const String& args) const {
       return;
     }
     wifi_.join();
-    writeWifiStatus(io, "ok ", wifi_.status());
+    writeStatus(io, "ok ", wifi_.status());
     return;
   }
 
@@ -187,11 +204,11 @@ void SerialLink::wifiCommand(Stream& io, const String& args) const {
       return;
     }
     wifi_.forget();
-    writeWifiStatus(io, "ok ", wifi_.status());
+    writeStatus(io, "ok ", wifi_.status());
     return;
   }
 
   badArgument(io, word);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

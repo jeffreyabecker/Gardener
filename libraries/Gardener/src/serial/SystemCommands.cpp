@@ -1,9 +1,9 @@
+#include "serial/SystemCommands.h"
+
 #include <Arduino.h>
-#include <stdint.h>
 
 #include "machine/Machine.h"
 #include "machine/SystemControl.h"
-#include "serial/SerialLink.h"
 
 namespace gardener {
 namespace {
@@ -13,10 +13,17 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
+// An argument the word does not take is refused by name, the way every line under a prefix is.
+void badArgument(Print& io, const String& token) {
+  io.print("err bad_argument ");
+  io.print(firstToken(token));
+  io.print('\n');
+}
+
 // The one line the wire adds to a set: which outcome the control reported, and how the wire says
 // it. Every decision behind the answer — the bounds, the ambient target, the refusal — is the
 // control's.
-void set(Stream& io, const String& args, SystemControl& control) {
+void set(Print& io, const String& args, SystemControl& control) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -27,9 +34,7 @@ void set(Stream& io, const String& args, SystemControl& control) {
   String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
   extra.trim();
   if (!extra.isEmpty()) {
-    io.print("err bad_argument ");
-    io.print(firstToken(extra));
-    io.print('\n');
+    badArgument(io, extra);
     return;
   }
 
@@ -40,7 +45,7 @@ void set(Stream& io, const String& args, SystemControl& control) {
   switch (control.set(pressureKpa)) {
     case ServeResult::Ok:
       io.print("ok target=");
-      io.print(pressureKpa, 1u);
+      io.print(pressureKpa, 2u);
       io.print(" state=PULL\n");
       return;
     case ServeResult::Released:
@@ -66,11 +71,9 @@ void set(Stream& io, const String& args, SystemControl& control) {
   }
 }
 
-void vent(Stream& io, const String& args, SystemControl& control) {
+void vent(Print& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
-    io.print("err bad_argument ");
-    io.print(firstToken(args));
-    io.print('\n');
+    badArgument(io, args);
     return;
   }
 
@@ -78,11 +81,9 @@ void vent(Stream& io, const String& args, SystemControl& control) {
   io.print("ok state=VENT\n");
 }
 
-void reset(Stream& io, const String& args, SystemControl& control) {
+void reset(Print& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
-    io.print("err bad_argument ");
-    io.print(firstToken(args));
-    io.print('\n');
+    badArgument(io, args);
     return;
   }
 
@@ -92,8 +93,7 @@ void reset(Stream& io, const String& args, SystemControl& control) {
 
 }  // namespace
 
-// The status line both `get` and the heartbeat write, so the two cannot drift apart.
-void SerialLink::writeStatus(Stream& io, const char* prefix) const {
+void SystemCommands::writeStatus(Print& io, const char* prefix) const {
   const SystemStatus status = control_.status();
 
   String line = prefix;
@@ -118,47 +118,42 @@ void SerialLink::writeStatus(Stream& io, const char* prefix) const {
 }
 
 // The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
-void SerialLink::execute(Stream& io, const String& line) {
-  const int space = line.indexOf(' ');
-  String verb = space < 0 ? line : line.substring(0, (unsigned int)space);
-  String args = space < 0 ? String() : line.substring((unsigned int)space + 1);
-  args.trim();
-  verb.toLowerCase();
+void SystemCommands::serve(Print& io, const String& args) {
+  const int space = args.indexOf(' ');
+  String word = space < 0 ? args : args.substring(0, (unsigned int)space);
+  String rest = space < 0 ? String() : args.substring((unsigned int)space + 1);
+  rest.trim();
+  word.toLowerCase();
 
-  if (verb.isEmpty()) {
-    io.print("err bad_argument\n");
-    return;
-  }
-  if (verb == "get") {
-    if (!args.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(args));
-      io.print('\n');
+  if (word == "get") {
+    if (!rest.isEmpty()) {
+      badArgument(io, rest);
       return;
     }
     writeStatus(io, "ok ");
     return;
   }
-  if (verb == "set") {
-    set(io, args, control_);
+  if (word == "set") {
+    set(io, rest, control_);
     return;
   }
-  if (verb == "vent") {
-    vent(io, args, control_);
+  if (word == "vent") {
+    vent(io, rest, control_);
     return;
   }
-  if (verb == "reset") {
-    reset(io, args, control_);
-    return;
-  }
-  if (verb == "wifi") {
-    wifiCommand(io, args);
+  if (word == "reset") {
+    reset(io, rest, control_);
     return;
   }
 
-  io.print("err unknown_verb ");
-  io.print(verb);
-  io.print('\n');
+  // A bare `sys` is nothing the machine answers: `sys get` is the one way to ask for the status.
+  if (word.isEmpty()) {
+    io.print("err bad_argument\n");
+    return;
+  }
+  badArgument(io, word);
 }
+
+void SystemCommands::heartbeat(Print& io) { writeStatus(io, "hb "); }
 
 }  // namespace gardener

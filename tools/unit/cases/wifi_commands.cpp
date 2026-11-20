@@ -12,6 +12,7 @@
 
 #include "Clock.h"
 #include "TextStream.h"
+#include "WifiCommands.h"
 #include "fakes/Parts.h"
 #include "fakes/Wifi.h"
 #include "machine/CommandQueue.h"
@@ -28,6 +29,7 @@ using gardener::SerialLink;
 using gardener::SystemControl;
 using gardener::WifiNetwork;
 using gardener::host::TextStream;
+using gardener::runtime::WifiCommands;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
@@ -56,10 +58,11 @@ class OpenQueue : public CommandQueue {
 
 struct Bench {
   Bench()
-      : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue),
-        link(io, nullptr, logger, control, wifi) {
+      : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue), commands(wifi),
+        link(io, nullptr, logger) {
     gardener::host::reset();
     machine.boot();
+    link.add(commands);
     link.begin();
   }
 
@@ -79,6 +82,7 @@ struct Bench {
   OpenQueue queue;
   Machine machine;
   SystemControl control;
+  WifiCommands commands;
   TextStream io;
   SerialLink link;
 };
