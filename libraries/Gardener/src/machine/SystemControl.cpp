@@ -1,5 +1,7 @@
 #include "machine/SystemControl.h"
 
+#include <Arduino.h>
+
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
@@ -16,6 +18,7 @@ SystemStatus SystemControl::status() const {
   status.targetKpa = vacuum_.targetPressureKpa();
   status.state = vacuum_.runState();
   status.dutyPercent = vacuum_.dutyPercent();
+  status.uptimeMs = millis();
   status.fault = vacuum_.faultCode();
   return status;
 }

@@ -18,7 +18,7 @@ Four verbs for the machine on a line ending in LF, and one word for the network:
 
 | command | answer |
 | --- | --- |
-| `get` | `ok pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
 | `set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
 | `vent` | `ok state=VENT` |
 | `reset` | `ok state=IDLE` — clears a latched fault |
@@ -45,9 +45,11 @@ answers nothing while the radio is joining, and its list is one line per network
 cannot carry a street's worth of names in one write.
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
-unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the
-`get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
-without polling. Its own word keeps it clear of the replies a controller is waiting for.
+unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z>
+fault=<code|none>`, the `get` fields without the `ok` — so a controller can tell a quiet machine
+from a dead one without polling. Its own word keeps it clear of the replies a controller is waiting
+for. Every status line carries `uptime_ms`, the milliseconds since boot at the instant the reading
+was copied, so a controller can place two of them in time.
 
 ## Web
 
@@ -56,7 +58,7 @@ serves a page tree at `/` and the API the page drives over the same four verbs:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `ok=1&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
 | `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
 | `POST /api/vent` | `ok=1&state=VENT` |
 | `POST /api/reset` | `ok=1&state=IDLE` |

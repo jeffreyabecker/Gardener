@@ -446,7 +446,9 @@ const char* WebLink::typeOf(const String& path) {
 esp_err_t WebLink::onStatus(httpd_req_t* request) {
   const SystemStatus now = from(request)->control_.status();
 
-  String body = "ok=1&pressure_kpa=";
+  String body = "ok=1&uptime_ms=";
+  body += String(now.uptimeMs);
+  body += "&pressure_kpa=";
   body += String(now.pressureKpa, 2u);
   body += "&target=";
   body += String(now.targetKpa, 1u);

@@ -97,7 +97,9 @@ void SerialLink::writeStatus(Stream& io, const char* prefix) const {
   const SystemStatus status = control_.status();
 
   String line = prefix;
-  line += "pressure_kpa=";
+  line += "uptime_ms=";
+  line += String(status.uptimeMs);
+  line += " pressure_kpa=";
   line += String(status.pressureKpa, 2u);
 
   // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is

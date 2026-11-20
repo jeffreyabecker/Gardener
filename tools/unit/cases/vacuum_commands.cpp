@@ -94,9 +94,17 @@ TEST_CASE("get answers the pressure to two decimals and the rest to one") {
   Bench bench;
   bench.send("get\n");
   const std::string reply = bench.reply();
-  CHECK(contains(reply, "ok pressure_kpa=0.00 "));
+  CHECK(contains(reply, "ok uptime_ms=0 "));
+  CHECK(contains(reply, " pressure_kpa=0.00 "));
   CHECK(contains(reply, " target=0.0 "));
   CHECK(contains(reply, " duty=0.0 "));
+}
+
+TEST_CASE("get stamps the reply with the uptime it was taken at") {
+  Bench bench;
+  gardener::host::advance(250);
+  bench.send("get\n");
+  CHECK(contains(bench.reply(), "ok uptime_ms=250 "));
 }
 
 TEST_CASE("get answers the state and the fault") {
