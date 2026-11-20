@@ -1,5 +1,6 @@
 #include "serial/SerialLink.h"
 
+#include "core/Formatting.h"
 #include "core/Logger.h"
 
 namespace gardener {
@@ -57,13 +58,11 @@ bool SerialLink::controllerAttached() const { return present_ ? present_() : tru
 // The link writes its own errors; a plugin formats its reply through the stream it is handed.
 
 void SerialLink::linkError(const char* code, const String& detail) {
-  stream_.print("err ");
-  stream_.print(code);
-  if (!detail.isEmpty()) {
-    stream_.print(' ');
-    stream_.print(detail);
+  if (detail.isEmpty()) {
+    println(stream_, "err ", code);
+    return;
   }
-  stream_.print('\n');
+  println(stream_, "err ", code, ' ', detail);
 }
 
 // --- bytes -----------------------------------------------------------------
@@ -125,9 +124,7 @@ void SerialLink::dispatch(Stream& io, const String& line) {
   }
 
   // The first word is a part's own, so an unserved one names the word rather than a verb shape.
-  io.print("err unknown_prefix ");
-  io.print(prefix);
-  io.print('\n');
+  println(io, "err unknown_prefix ", prefix);
 }
 
 // Unsolicited, so each plugin's line carries a word of its own: a controller reading `ok` and `err`

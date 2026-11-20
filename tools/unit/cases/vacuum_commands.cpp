@@ -120,7 +120,7 @@ TEST_CASE("a set inside the range queues the target and a start") {
   Bench bench;
   bench.sensor.read(12.0f);
   bench.send("sys set 5\n");
-  CHECK_EQ(bench.reply(), std::string("ok target=5.0 state=PULL\n"));
+  CHECK_EQ(bench.reply(), std::string("ok target=5.00 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
   REQUIRE(bench.queue.take(command));
@@ -150,7 +150,7 @@ TEST_CASE("the floor itself is an accepted target") {
   Bench bench;
   bench.sensor.read(12.0f);
   bench.send("sys set 60\n");
-  CHECK_EQ(bench.reply(), std::string("ok target=60.0 state=PULL\n"));
+  CHECK_EQ(bench.reply(), std::string("ok target=60.00 state=PULL\n"));
 }
 
 TEST_CASE("a target below ambient is refused with its minimum") {
@@ -169,7 +169,7 @@ TEST_CASE("a target that is not a number is refused with its minimum") {
 TEST_CASE("a target past the floor is refused with its maximum") {
   Bench bench;
   bench.send("sys set 60.1\n");
-  CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=60.1 max=60.0\n"));
+  CHECK_EQ(bench.reply(), std::string("err out_of_range field=target value=60.1 max=60.00\n"));
 }
 
 TEST_CASE("a second target token is refused by name") {
@@ -206,7 +206,7 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
   bench.sensor.read(12.0f);
 
   bench.send("sys set 40\n");
-  CHECK_EQ(bench.reply(), std::string("ok target=40.0 state=PULL\n"));
+  CHECK_EQ(bench.reply(), std::string("ok target=40.00 state=PULL\n"));
 
   MachineCommand command{MachineCommand::Op::Stop};
   REQUIRE(bench.queue.take(command));

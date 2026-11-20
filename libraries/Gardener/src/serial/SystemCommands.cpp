@@ -1,7 +1,9 @@
 #include "serial/SystemCommands.h"
 
 #include <Arduino.h>
+#include <utility>
 
+#include "core/Formatting.h"
 #include "machine/Machine.h"
 #include "machine/SystemControl.h"
 
@@ -15,9 +17,7 @@ String firstToken(const String& args) {
 
 // An argument the word does not take is refused by name, the way every line under a prefix is.
 void badArgument(Print& io, const String& token) {
-  io.print("err bad_argument ");
-  io.print(firstToken(token));
-  io.print('\n');
+  println(io, "err bad_argument ", firstToken(token));
 }
 
 // The one line the wire adds to a set: which outcome the control reported, and how the wire says
@@ -25,7 +25,7 @@ void badArgument(Print& io, const String& token) {
 // control's.
 void set(Print& io, const String& args, SystemControl& control) {
   if (args.isEmpty()) {
-    io.print("err bad_argument\n");
+    println(io, "err bad_argument");
     return;
   }
 
@@ -44,29 +44,19 @@ void set(Print& io, const String& args, SystemControl& control) {
 
   switch (control.set(pressureKpa)) {
     case ServeResult::Ok:
-      io.print("ok target=");
-      io.print(pressureKpa, 2u);
-      io.print(" state=PULL\n");
+      println(io, "ok target=", std::make_pair(pressureKpa, 2), " state=PULL");
       return;
     case ServeResult::Released:
-      io.print("ok target=0.0 state=VENT\n");
+      println(io, "ok target=0.0 state=VENT");
       return;
     case ServeResult::BelowRange:
-      io.print("err out_of_range field=target value=");
-      io.print(token);
-      io.print(" min=0.0\n");
+      println(io, "err out_of_range field=target value=", quote(token), " min=0.0");
       return;
     case ServeResult::AboveRange:
-      io.print("err out_of_range field=target value=");
-      io.print(token);
-      io.print(" max=");
-      io.print(ControlFloorKpa, 1u);
-      io.print('\n');
+      println(io, "err out_of_range field=target value=", quote(token), " max=", ControlFloorKpa);
       return;
     case ServeResult::NotReady:
-      io.print("err not_ready ");
-      io.print(control.refusal());
-      io.print('\n');
+      println(io, "err not_ready ", quote(control.refusal()));
       return;
   }
 }
@@ -78,7 +68,7 @@ void vent(Print& io, const String& args, SystemControl& control) {
   }
 
   control.vent();
-  io.print("ok state=VENT\n");
+  println(io, "ok state=VENT");
 }
 
 void reset(Print& io, const String& args, SystemControl& control) {
@@ -88,7 +78,7 @@ void reset(Print& io, const String& args, SystemControl& control) {
   }
 
   control.reset();
-  io.print("ok state=IDLE\n");
+  println(io, "ok state=IDLE");
 }
 
 }  // namespace
@@ -96,25 +86,13 @@ void reset(Print& io, const String& args, SystemControl& control) {
 void SystemCommands::writeStatus(Print& io, const char* prefix) const {
   const SystemStatus status = control_.status();
 
-  String line = prefix;
-  line += "uptime_ms=";
-  line += String(status.uptimeMs);
-  line += " pressure_kpa=";
-  line += String(status.pressureKpa, 2u);
-
   // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
   // the one that holds the chamber released.
-  line += " target=";
-  line += String(status.targetKpa, 1u);
-
-  line += " state=";
-  line += runStateName(status.state);
-  line += " duty=";
-  line += String(status.dutyPercent, 1u);
-  line += " fault=";
-  line += (status.fault[0] ? status.fault : "none");
-  line += '\n';
-  io.print(line);
+  println(io, prefix, "uptime_ms=", status.uptimeMs,
+          " pressure_kpa=", std::make_pair(status.pressureKpa, 2),
+          " target=", std::make_pair(status.targetKpa, 1), " state=", runStateName(status.state),
+          " duty=", std::make_pair(status.dutyPercent, 1),
+          " fault=", status.fault[0] ? status.fault : "none");
 }
 
 // The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
@@ -148,7 +126,7 @@ void SystemCommands::serve(Print& io, const String& args) {
 
   // A bare `sys` is nothing the machine answers: `sys get` is the one way to ask for the status.
   if (word.isEmpty()) {
-    io.print("err bad_argument\n");
+    println(io, "err bad_argument");
     return;
   }
   badArgument(io, word);

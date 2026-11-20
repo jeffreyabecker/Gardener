@@ -103,8 +103,8 @@ class FakeValve : public VentValve {
 // The one sink: every line a domain logs, in order, with the level it came in at.
 class RecordingLogger : public Logger {
  public:
-  void info(const char* text) override { log('I', text); }
-  void warn(const char* text) override { log('W', text); }
+  using Logger::log;
+  void log(LogLevel level, const char* text) override { record(logLevelLetter(level), text); }
 
   // Whether any line so far contains `text`.
   bool saw(const char* text) const {
@@ -117,7 +117,7 @@ class RecordingLogger : public Logger {
   const std::vector<std::string>& lines() const { return lines_; }
 
  private:
-  void log(char level, const char* text) {
+  void record(char level, const char* text) {
     std::string line;
     line += level;
     line += ' ';

@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "WifiControl.h"
+#include "core/Formatting.h"
 #include "serial/CommandPlugin.h"
 
 namespace gardener::runtime {
@@ -12,7 +13,7 @@ namespace gardener::runtime {
 // that clears it. Every decision behind them is WifiControl's; this plugin only parses and formats.
 //
 // It is a header because the host suite compiles the sketch's platform-free headers and not its
-// sources, and the quoting rules earn their cases: a network name with a space or a quote in it has
+// sources, and the parsing rules earn their cases: a network name with a space or a quote in it has
 // to survive the reply and the next command.
 class WifiCommands : public CommandPlugin {
  public:
@@ -25,38 +26,12 @@ class WifiCommands : public CommandPlugin {
   // How many networks one scan puts on a line.
   static constexpr int ScanListMax = 16;
 
-  // Writes a value bare while it reads back as one token, and quoted when it does not, with the two
-  // characters that would end or escape the quote spelled out.
-  static bool needsQuotes(const String& value);
-  static String quoted(const String& value);
   static String unquoted(const String& text);
   static void badArgument(Print& io, const String& token);
   static void writeStatus(Print& io, const char* prefix, const WifiStatus& status);
 
   WifiControl& wifi_;
 };
-
-inline bool WifiCommands::needsQuotes(const String& value) {
-  if (value.isEmpty()) return true;
-  for (unsigned int i = 0; i < value.length(); i++) {
-    const char character = value[i];
-    if (character == ' ' || character == '"' || character == '\\') return true;
-  }
-  return false;
-}
-
-inline String WifiCommands::quoted(const String& value) {
-  if (!needsQuotes(value)) return value;
-
-  String out = "\"";
-  for (unsigned int i = 0; i < value.length(); i++) {
-    const char character = value[i];
-    if (character == '"' || character == '\\') out += '\\';
-    out += character;
-  }
-  out += '"';
-  return out;
-}
 
 // A value the way the wire takes one: a surrounding pair of quotes is stripped and its escapes read,
 // so `"My Net"` and the rest of a line that is `My Net` are the same name. Text after a closed pair
@@ -84,23 +59,12 @@ inline String WifiCommands::unquoted(const String& text) {
 inline void WifiCommands::badArgument(Print& io, const String& token) {
   const int space = token.indexOf(' ');
   String name = space < 0 ? token : token.substring(0, (unsigned int)space);
-  io.print("err bad_argument ");
-  io.print(name);
-  io.print('\n');
+  println(io, "err bad_argument ", name);
 }
 
 inline void WifiCommands::writeStatus(Print& io, const char* prefix, const WifiStatus& status) {
-  String line = prefix;
-  line += "ssid=";
-  line += quoted(status.ssid);
-  line += " mode=";
-  line += status.mode;
-  line += " ip=";
-  line += status.address;
-  line += " keep_ap=";
-  line += status.keepPortal ? "1" : "0";
-  line += '\n';
-  io.print(line);
+  println(io, prefix, "ssid=", quote(status.ssid), " mode=", status.mode, " ip=", status.address,
+          " keep_ap=", status.keepPortal ? 1 : 0);
 }
 
 inline void WifiCommands::serve(Print& io, const String& args) {
@@ -124,21 +88,9 @@ inline void WifiCommands::serve(Print& io, const String& args) {
     const int count = wifi_.scan(networks, ScanListMax);
     // One line per network, because the receipt is a line the CDC can carry in one write: a scan of
     // a street is several hundred bytes, and one write of that loses a chunk of its middle.
-    String head = "ok count=";
-    head += String(count);
-    head += '\n';
-    io.print(head);
+    println(io, "ok count=", count);
     for (int i = 0; i < count; i++) {
-      String line = "ssid";
-      line += String(i);
-      line += '=';
-      line += quoted(networks[i].ssid);
-      line += " rssi";
-      line += String(i);
-      line += '=';
-      line += String((long)networks[i].rssi);
-      line += '\n';
-      io.print(line);
+      println(io, "ssid", i, '=', quote(networks[i].ssid), " rssi", i, '=', networks[i].rssi);
       // The ring drains slower than this loop writes, so each line waits for the one before it: a
       // scan of a street otherwise fills the ring and loses a chunk of its own reply.
       io.flush();
@@ -153,9 +105,7 @@ inline void WifiCommands::serve(Print& io, const String& args) {
     }
     const String name = unquoted(rest);
     wifi_.setSsid(name);
-    io.print("ok ssid=");
-    io.print(quoted(name));
-    io.print('\n');
+    println(io, "ok ssid=", quote(name));
     return;
   }
 
@@ -163,7 +113,7 @@ inline void WifiCommands::serve(Print& io, const String& args) {
     // The password is stored and never repeated: a scan of the wire's own history is not a place to
     // read it back from.
     wifi_.setPass(unquoted(rest));
-    io.print("ok\n");
+    println(io, "ok");
     return;
   }
 
@@ -172,12 +122,12 @@ inline void WifiCommands::serve(Print& io, const String& args) {
     flag.toLowerCase();
     if (flag == "on") {
       wifi_.setKeepPortal(true);
-      io.print("ok keep_ap=1\n");
+      println(io, "ok keep_ap=1");
       return;
     }
     if (flag == "off") {
       wifi_.setKeepPortal(false);
-      io.print("ok keep_ap=0\n");
+      println(io, "ok keep_ap=0");
       return;
     }
     badArgument(io, rest);
@@ -190,7 +140,7 @@ inline void WifiCommands::serve(Print& io, const String& args) {
       return;
     }
     if (wifi_.status().ssid.isEmpty()) {
-      io.print("err no_network\n");
+      println(io, "err no_network");
       return;
     }
     wifi_.join();

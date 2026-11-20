@@ -181,7 +181,7 @@ TEST_CASE("the word's argument reaches the plugin intact") {
   Bench bench;
   bench.sensor.read(12.0f);
   bench.send("sys set 40\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok target=40.0 state=PULL\n"));
+  CHECK_EQ(bench.io.printed(), std::string("ok target=40.00 state=PULL\n"));
 }
 
 TEST_CASE("a heartbeat goes out once five seconds have passed") {
