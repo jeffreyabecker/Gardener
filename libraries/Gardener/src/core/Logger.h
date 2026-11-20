@@ -45,19 +45,29 @@ inline char logLevelLetter(LogLevel level) {
   return '?';
 }
 
-// What every consumer holds: one record at a level, and the names a caller reaches for. There is one
-// sink — SerialLogger, framed records on the serial line — and it writes from boot, so no consumer
-// picks a sink and none checks a level of its own. A record is one text; two parts or more are
-// formatted into that text the way print writes them, so a caller does not build a String only to
-// hand over its c_str().
+// What every consumer holds: one record at a level, the level the logger admits, and the names a
+// caller reaches for. There is one sink — SerialLogger, framed records on the serial line — and it
+// writes from boot, so no consumer picks a sink and none checks a level of its own. A record is one
+// text; two parts or more are formatted into that text the way print writes them, so a caller does
+// not build a String only to hand over its c_str(). A level above the current one drops the call,
+// before anything is formatted.
 class Logger {
  public:
   virtual ~Logger() = default;
 
-  virtual void log(LogLevel level, const char* text) = 0;
+  // The highest-numbered level the logger admits, so Debug, the default, admits every record and a
+  // record less severe than this one is a no-op.
+  LogLevel level() const { return level_; }
+  void setLevel(LogLevel level) { level_ = level; }
+
+  void log(LogLevel level, const char* text) {
+    if (level > level_) return;
+    emit(level, text);
+  }
 
   template <typename First, typename Second, typename... Rest>
   void log(LogLevel level, const First& first, const Second& second, const Rest&... rest) {
+    if (level > level_) return;
     log(level, format(first, second, rest...).c_str());
   }
 
@@ -73,6 +83,13 @@ class Logger {
   void warn(const First& first, const Second& second, const Rest&... rest) {
     log(LogLevel::Warning, first, second, rest...);
   }
+
+ protected:
+  // Where a record goes once the current level admits it.
+  virtual void emit(LogLevel level, const char* text) = 0;
+
+ private:
+  LogLevel level_ = LogLevel::Debug;
 };
 
 }  // namespace gardener

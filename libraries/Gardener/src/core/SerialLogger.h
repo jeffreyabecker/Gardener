@@ -13,8 +13,8 @@ class SerialLogger : public Logger {
  public:
   explicit SerialLogger(Stream& serial) : serial_(serial) {}
 
-  using Logger::log;
-  void log(LogLevel level, const char* text) override { write(logLevelLetter(level), text); }
+ protected:
+  void emit(LogLevel level, const char* text) override { write(logLevelLetter(level), text); }
 
  private:
   void write(char level, const char* text) {

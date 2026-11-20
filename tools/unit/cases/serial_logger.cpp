@@ -67,6 +67,25 @@ TEST_CASE("a record's parts are formatted the way print writes them") {
                                          "[R] pressure=1.5\n"));
 }
 
+TEST_CASE("a logger starts at Debug and keeps the level it is given") {
+  TextStream serial;
+  SerialLogger logger(serial);
+  CHECK(logger.level() == gardener::LogLevel::Debug);
+  logger.setLevel(gardener::LogLevel::Info);
+  CHECK(logger.level() == gardener::LogLevel::Info);
+}
+
+TEST_CASE("a record above the current level is not written") {
+  TextStream serial;
+  SerialLogger logger(serial);
+  logger.setLevel(gardener::LogLevel::Warning);
+  logger.info("quiet");
+  logger.log(gardener::LogLevel::Debug, "quieter");
+  logger.warn("loud");
+  logger.log(gardener::LogLevel::Error, "loudest");
+  CHECK_EQ(serial.printed(), std::string("[W] loud\n[R] loudest\n"));
+}
+
 TEST_CASE("a record with no text is not written") {
   TextStream serial;
   SerialLogger logger(serial);
