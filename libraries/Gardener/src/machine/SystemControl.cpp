@@ -19,6 +19,7 @@ SystemStatus SystemControl::status() const {
   status.state = vacuum_.runState();
   status.dutyPercent = vacuum_.dutyPercent();
   status.uptimeMs = millis();
+  status.holdStartMs = vacuum_.holdStartMs();
   status.fault = vacuum_.faultCode();
   return status;
 }

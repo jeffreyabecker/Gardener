@@ -147,6 +147,43 @@ TEST_CASE("a hold inside the ceiling is granted as asked") {
   CHECK_EQ(rig.system.holdSeconds(), static_cast<uint32_t>(901));
 }
 
+TEST_CASE("a start that lands in the band reports when the hold began") {
+  Rig rig;
+  rig.sensor.read(20.0f);
+  rig.system.begin();
+  gardener::host::advance(250);
+  rig.system.setTarget(20.0f);
+  REQUIRE(rig.system.start());
+  CHECK_EQ(rig.system.runState(), RunState::Holding);
+  CHECK_EQ(rig.system.holdStartMs(), static_cast<uint32_t>(250));
+}
+
+TEST_CASE("a run that reaches the band stamps the hold when it does") {
+  Rig rig;
+  runFrom(rig, 20.0f, 40.0f);
+  REQUIRE(rig.system.runState() == RunState::Pulling);
+  CHECK_EQ(rig.system.holdStartMs(), static_cast<uint32_t>(0));
+
+  rig.sensor.read(40.0f);
+  const uint32_t reachedAt = static_cast<uint32_t>(gardener::host::nowMs()) + ControlPeriodMs;
+  rig.beat();
+  CHECK_EQ(rig.system.runState(), RunState::Holding);
+  CHECK_EQ(rig.system.holdStartMs(), reachedAt);
+}
+
+TEST_CASE("a hold that has ended reports no hold start") {
+  Rig rig;
+  rig.sensor.read(20.0f);
+  rig.system.begin();
+  gardener::host::advance(250);
+  rig.system.setTarget(20.0f);
+  REQUIRE(rig.system.start());
+  REQUIRE(rig.system.runState() == RunState::Holding);
+  rig.system.stop();
+  CHECK_EQ(rig.system.runState(), RunState::Venting);
+  CHECK_EQ(rig.system.holdStartMs(), static_cast<uint32_t>(0));
+}
+
 TEST_CASE("the deadline ends the run as a release and reports itself once") {
   Rig rig;
   rig.sensor.read(40.0f);

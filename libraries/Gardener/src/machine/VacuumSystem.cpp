@@ -18,6 +18,7 @@ float deepEdgeKpa(float targetKpa) { return targetKpa * (1.0f + ControlAbovePerc
 // but none of them can move the state off Fault, so runState() == Fault and faulted() agree.
 void VacuumSystem::setState(RunState state) {
   if (faulted() && state != RunState::Fault) return;
+  if (state == RunState::Holding && state_ != RunState::Holding) holdStartMs_ = millis();
   state_ = state;
 }
 
