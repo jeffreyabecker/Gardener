@@ -36,7 +36,6 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PROJECT_LIBS = ROOT / "libraries"
 
 # The sketch: the device's own composition root, which compiles the libraries under `libraries/`.
 SKETCH = ROOT / "firmware" / "gardener"
@@ -60,6 +59,11 @@ FLASH_PAGE = 256
 # port. Without CDCOnBoot Serial is UART0 on GPIO43/44 and the interface is invisible to a USB cable.
 DEFAULT_FQBN = ("esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,"
                 "FlashSize=4M,PartitionScheme=default")
+
+# The sketch profile the wrapper compiles, from sketch.yaml: it pins the board, the platform, the
+# tree's own library and the Bluetooth stack, so a build is the tree's choice rather than whatever
+# the machine's library manager was left holding.
+PROFILE = "ble"
 
 # Where `--define` writes the rig's numbers. It sits in the sketch because that folder is on the
 # include path of every translation unit, and it is generated rather than committed because it is
@@ -182,8 +186,7 @@ def compile_dir():
 def compile_sketch(*extra):
     write_knob_defaults()
     write_rig_header()
-    arguments = ["compile", "--fqbn", FQBN, "--libraries", str(PROJECT_LIBS), "--build-path",
-                 str(compile_dir())]
+    arguments = ["compile", "--profile", PROFILE, "--build-path", str(compile_dir())]
     arguments.extend(extra)
     arguments.append(str(SKETCH))
     # arduino-cli prints nothing while it works, so --verbose is what makes a long build show which
@@ -303,20 +306,18 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, DEFINES
+    global PORT, VERBOSE, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "clean"],
                         default="build", help="what to do (default: build)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
-    parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
     parser.add_argument("--define", action="append", default=[], metavar="NAME=VALUE",
                         help="a build symbol for the rig's own numbers, e.g. CONTROL_FLOOR_KPA=55.0f; "
                              "repeatable")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
     args = parser.parse_args()
 
-    FQBN = args.fqbn
     PORT = args.port
     VERBOSE = args.verbose
     DEFINES = args.define

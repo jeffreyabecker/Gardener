@@ -10,3 +10,18 @@
 # FlashSize and PartitionScheme are pinned so a build does not depend on whatever the
 # board manager was left set to; nothing in the firmware mounts a filesystem now.
 default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+
+# The profile the wrapper compiles. It pins the platform, the tree's own library by path and the one
+# library the tree does not hold — the Bluetooth stack — for the same reason the FQBN is pinned
+# above: the build is the tree's choice rather than whatever the machine's library manager was left
+# holding. A profile build excludes the globally installed libraries, so everything it needs is
+# named here.
+profiles:
+  ble:
+    fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    platforms:
+      - platform: esp32:esp32 (3.0.3)
+        platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    libraries:
+      - dir: ../../libraries/Gardener
+      - NimBLE-Arduino (2.5.1)

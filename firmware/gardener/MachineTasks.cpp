@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "BleLink.h"
 #include "beats/MachineTick.h"
 #include "core/Knob.h"
 #include "core/Logger.h"
@@ -40,9 +41,10 @@ GARDENER_KNOB_VALID(UBaseType_t, InterfaceCore, GARDENER_INTERFACE_TASK_CORE, 0,
 struct ControlState {
   MachineTick& tick;
 };
-// The interface task's own state: the link it polls.
+// The interface task's own state: the links it polls.
 struct InterfaceState {
   SerialLink* link;
+  BleLink* bluetooth;
 };
 
 void controlTask(void* arg) {
@@ -60,7 +62,9 @@ void interfaceTask(void* arg) {
   InterfaceState& state = *static_cast<InterfaceState*>(arg);
 
   for (;;) {
-    state.link->poll(millis());
+    const uint32_t nowMs = millis();
+    state.link->poll(nowMs);
+    if (state.bluetooth) state.bluetooth->poll(nowMs);
 
     vTaskDelay(pdMS_TO_TICKS(5));
   }
@@ -68,10 +72,11 @@ void interfaceTask(void* arg) {
 
 }  // namespace
 
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
+                       BleLink* bluetooth) {
   static MachineTick tick{machine.vacuum(), machine.logger(), queue};
   static ControlState control{tick};
-  static InterfaceState interface{link};
+  static InterfaceState interface{link, bluetooth};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

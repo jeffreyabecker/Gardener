@@ -1,16 +1,17 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
-then vents it — driven over a serial line and a web page.
+then vents it — driven over a serial line, a web page and a Bluetooth link.
 
-The serial line and the WiFi page are the ways in. A controller sets a depth and the machine pulls
-to it; a vent releases the chamber; a reset clears a fault. What the device owns is what has to
-happen when nobody is watching: holding the target, and venting the chamber through one path on
-stop, abort or fault. Pressures are kPa below ambient, on both wires and in the firmware.
+The serial line, the WiFi page and the Bluetooth link are the ways in. A controller sets a depth
+and the machine pulls to it; a vent releases the chamber; a reset clears a fault. What the device
+owns is what has to happen when nobody is watching: holding the target, and venting the chamber
+through one path on stop, abort or fault. Pressures are kPa below ambient, on every wire and in the
+firmware.
 
 The device is the machine — pump, sensor and vent valve. One sketch,
 [firmware/gardener](./firmware/gardener), composes the libraries for it: what it names is what the
-device has, over the serial link and the web link it builds.
+device has, over the serial, web and Bluetooth links it builds.
 
 ## Wire
 
@@ -128,6 +129,68 @@ The network the board stores lives in the same partition, at `/wifi.conf` outsid
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
 new image: re-flashing the page tree brings the setup access point back.
 
+## Bluetooth
+
+A phone or a laptop beside the rig can reach the machine over Bluetooth LE without a network or an
+address. The device advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own
+address, and serves one GATT service over the same control the wire and the page ask. Every
+characteristic requires an encrypted, bonded link.
+
+| what | UUID | properties |
+| --- | --- | --- |
+| service | `6d3a0000-6a3f-4d1c-9d5b-9e0f4c7a2b31` | — |
+| status | `6d3a0001-6a3f-4d1c-9d5b-9e0f4c7a2b31` | read, notify |
+| command | `6d3a0002-6a3f-4d1c-9d5b-9e0f4c7a2b31` | write |
+| reply | `6d3a0003-6a3f-4d1c-9d5b-9e0f4c7a2b31` | read, notify |
+
+Everything is little-endian, and floats are IEEE-754 binary32.
+
+**Status** — 18 bytes, readable at any time and notified every five seconds and at once when the
+state or the target moves.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 4 | `uptime_ms` — milliseconds since boot when the reading was copied |
+| 4 | 4 | `pressure_kpa` — depth below ambient, 0 at ambient |
+| 8 | 4 | `target` — depth below ambient, 0 is the ambient target |
+| 12 | 4 | `duty_percent` |
+| 16 | 1 | `state` — 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
+| 17 | 1 | `fault` — the code table below, 0 when nothing is latched |
+
+**Command** — a write with a response: one byte for `vent` and `reset`, five for `set`.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 1 | `op` — 1 set, 2 vent, 3 reset |
+| 1 | 4 | `target_kpa` — only when `op` is 1 |
+
+**Reply** — two bytes, notified when the write is served and readable afterwards.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 1 | `result` — 0 ok, 1 released, 2 below range, 3 above range, 4 not ready, 5 bad command |
+| 1 | 1 | `refusal` — 0 none, 1 latch, 2 no reading, 3 unknown |
+
+The codes are the machine's words written as numbers:
+
+| fault | code | | refusal | code |
+| --- | --- | --- | --- | --- |
+| nothing latched | 0 | | nothing | 0 |
+| `sensor` | 1 | | `latch` | 1 |
+| `vent_timeout` | 2 | | `no_reading` | 2 |
+| `overshoot` | 3 | | anything else | 3 |
+| `no_progress` | 4 | | | |
+| anything else | 5 | | | |
+
+A write of any other length or opcode answers `bad command` and queues nothing, and so does a
+five-byte `vent` or `reset`: each command has one spelling. `set` is the machine's one command and
+answers what `sys set` answers — a target of 0 is `released`, and a refusal queues nothing.
+
+One client at a time: a second is refused while the first is connected, and the board advertises
+again on disconnect. Pairing is Just Works with the bond remembered, in NVS across a power cut. It
+buys an encrypted wire and a phone that reconnects without asking, and it authenticates nobody — the
+first client to pair gets the bond, and there is no button on the board to withdraw it.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
@@ -151,13 +214,15 @@ template.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
-without which `Serial` is UART0 and a USB cable sees nothing. The build uses
-`--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the control
-law, the serial link and the three drivers that fill its parts — is the firmware rather than a
-sketchbook copy. The board it runs on sits beside the sketch in
-[firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link and
-the tasks that drive them. The web link uses the ESP-IDF HTTP server, `DNSServer`, `LittleFS` and
-`ESPmDNS` from the core, so there is no extra library to install.
+without which `Serial` is UART0 and a USB cable sees nothing. The build compiles the `ble` profile
+there, which pins the platform, [libraries/Gardener](./libraries/Gardener) — the machine, the
+control law, the serial link and the three drivers that fill its parts — by path, and
+NimBLE-Arduino 2.5.1, the one library the tree does not hold; the sketch's `build_opt.h` sets
+NimBLE's one-client connection limit. The board it runs on sits beside the sketch in
+[firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link, the
+Bluetooth link and the tasks that drive them. The web link uses the ESP-IDF HTTP server,
+`DNSServer`, `LittleFS` and `ESPmDNS` from the core, so it brings no extra library; the Bluetooth
+link is the one that does.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
 define set, so the next one compiles only what changed since, header dependents included.
