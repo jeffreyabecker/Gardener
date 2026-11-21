@@ -1,3 +1,6 @@
+// The link is the Bluetooth stack's; the no-ble profile compiles this file to nothing.
+#if __has_include(<NimBLEDevice.h>)
+
 #include "BleLink.h"
 
 #include <NimBLEDevice.h>
@@ -180,3 +183,5 @@ void BleLink::commanded(NimBLECharacteristic* characteristic) {
 }
 
 }  // namespace gardener::runtime
+
+#endif

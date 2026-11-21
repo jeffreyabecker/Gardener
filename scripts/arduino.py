@@ -60,10 +60,10 @@ FLASH_PAGE = 256
 DEFAULT_FQBN = ("esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,"
                 "FlashSize=4M,PartitionScheme=default")
 
-# The sketch profile the wrapper compiles, from sketch.yaml: it pins the board, the platform, the
-# tree's own library and the Bluetooth stack, so a build is the tree's choice rather than whatever
-# the machine's library manager was left holding.
-PROFILE = "ble"
+# The sketch profile the wrapper compiles unless one is named, from sketch.yaml: it pins the board,
+# the platform and the tree's own library, so a build is the tree's choice rather than whatever the
+# machine's library manager was left holding. The `ble` profile adds the Bluetooth stack.
+PROFILE = "no-ble"
 
 # Where `--define` writes the rig's numbers. It sits in the sketch because that folder is on the
 # include path of every translation unit, and it is generated rather than committed because it is
@@ -167,9 +167,9 @@ def _define(symbol):
 
 
 def build_flags():
-    """What a compile is made with, as far as the wrapper can change it: the board and the core. A
-    rig number is deliberately not in here — that is the point of the header."""
-    return "\n".join([FQBN, configuration()["core"]])
+    """What a compile is made with, as far as the wrapper can change it: the profile, the board and
+    the core. A rig number is deliberately not in here — that is the point of the header."""
+    return "\n".join([PROFILE, FQBN, configuration()["core"]])
 
 
 def compile_dir():
@@ -306,11 +306,13 @@ def monitor():
 
 
 def main():
-    global PORT, VERBOSE, DEFINES
+    global PROFILE, PORT, VERBOSE, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "clean"],
                         default="build", help="what to do (default: build)")
+    parser.add_argument("--profile", default=PROFILE,
+                        help=f"the sketch profile to compile (default: {PROFILE})")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--define", action="append", default=[], metavar="NAME=VALUE",
                         help="a build symbol for the rig's own numbers, e.g. CONTROL_FLOOR_KPA=55.0f; "
@@ -318,6 +320,7 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
     args = parser.parse_args()
 
+    PROFILE = args.profile
     PORT = args.port
     VERBOSE = args.verbose
     DEFINES = args.define

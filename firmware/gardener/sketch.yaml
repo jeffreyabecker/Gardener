@@ -11,11 +11,15 @@
 # board manager was left set to; nothing in the firmware mounts a filesystem now.
 default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
 
-# The profile the wrapper compiles. It pins the platform, the tree's own library by path and the one
-# library the tree does not hold — the Bluetooth stack — for the same reason the FQBN is pinned
-# above: the build is the tree's choice rather than whatever the machine's library manager was left
-# holding. A profile build excludes the globally installed libraries, so everything it needs is
-# named here.
+# The profiles the wrapper compiles. Each pins the platform and the tree's own library by path, for
+# the same reason the FQBN is pinned above: the build is the tree's choice rather than whatever the
+# machine's library manager was left holding. A profile build excludes the globally installed
+# libraries, so everything it needs is named here.
+#
+# `no-ble` is the default: the serial and web device, with no library the tree does not hold. `ble`
+# is the same firmware plus the Bluetooth stack, the one library the tree does not hold, and the
+# link compiles to a stub in the default build because BleLink.h looks for the stack's headers
+# rather than a define.
 profiles:
   ble:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
@@ -25,3 +29,10 @@ profiles:
     libraries:
       - dir: ../../libraries/Gardener
       - NimBLE-Arduino (2.5.1)
+  no-ble:
+    fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    platforms:
+      - platform: esp32:esp32 (3.0.3)
+        platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    libraries:
+      - dir: ../../libraries/Gardener

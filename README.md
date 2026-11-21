@@ -132,9 +132,10 @@ new image: re-flashing the page tree brings the setup access point back.
 ## Bluetooth
 
 A phone or a laptop beside the rig can reach the machine over Bluetooth LE without a network or an
-address. The device advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own
-address, and serves one GATT service over the same control the wire and the page ask. Every
-characteristic requires an encrypted, bonded link.
+address, in a build with the `ble` profile; the default build leaves the stack out. The device
+advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own address, and serves
+one GATT service over the same control the wire and the page ask. Every characteristic requires an
+encrypted, bonded link.
 
 | what | UUID | properties |
 | --- | --- | --- |
@@ -214,11 +215,13 @@ template.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
-without which `Serial` is UART0 and a USB cable sees nothing. The build compiles the `ble` profile
-there, which pins the platform, [libraries/Gardener](./libraries/Gardener) — the machine, the
-control law, the serial link and the three drivers that fill its parts — by path, and
-NimBLE-Arduino 2.5.1, the one library the tree does not hold; the sketch's `build_opt.h` sets
-NimBLE's one-client connection limit. The board it runs on sits beside the sketch in
+without which `Serial` is UART0 and a USB cable sees nothing. The build compiles the `no-ble`
+profile there, which pins the platform and
+[libraries/Gardener](./libraries/Gardener) — the machine, the control law, the serial link and the
+three drivers that fill its parts — by path. `--profile ble` adds NimBLE-Arduino 2.5.1, the one
+library the tree does not hold, and with it the Bluetooth link; the sketch's `build_opt.h` sets
+NimBLE's one-client connection limit in that build. Without the stack the link compiles to a stub,
+because `BleLink.h` asks for the stack's headers rather than a define. The board it runs on sits beside the sketch in
 [firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link, the
 Bluetooth link and the tasks that drive them. The web link uses the ESP-IDF HTTP server,
 `DNSServer`, `LittleFS` and `ESPmDNS` from the core, so it brings no extra library; the Bluetooth

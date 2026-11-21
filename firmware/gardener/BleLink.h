@@ -1,12 +1,23 @@
 #pragma once
 
 #include <Arduino.h>
-#include <NimBLEDevice.h>
 
 #include "core/Logger.h"
 #include "machine/SystemControl.h"
 
+// Whether this build has the Bluetooth stack: the ble profile names NimBLE-Arduino and the no-ble
+// profile does not. It is asked of the headers rather than of a define, so a profile alone decides
+// it, and without the stack the link below is a stub that leaves the composition root the same.
+#if __has_include(<NimBLEDevice.h>)
+#include <NimBLEDevice.h>
+#define GARDENER_HAS_BLE 1
+#else
+#define GARDENER_HAS_BLE 0
+#endif
+
 namespace gardener::runtime {
+
+#if GARDENER_HAS_BLE
 
 // The Bluetooth LE link: one GATT service over the same SystemControl the serial wire and the page
 // ask, so it is another way of asking rather than another way of deciding. The service carries the
@@ -43,5 +54,17 @@ class BleLink {
   uint8_t lastState_ = 0xFF;
   float lastTargetKpa_ = 0.0f;
 };
+
+#else
+
+// The no-ble build's link: present so nothing around it needs a guard, and silent.
+class BleLink {
+ public:
+  BleLink(SystemControl&, Logger&) {}
+  bool begin() { return false; }
+  void poll(uint32_t) {}
+};
+
+#endif
 
 }  // namespace gardener::runtime
