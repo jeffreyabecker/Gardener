@@ -16,10 +16,10 @@ the write is skipped while the folder is unchanged, because the partition also h
 the board stored and rewriting it would clear that. A page edit does rewrite it, and the board
 comes back as its setup access point.
 
-A profile in `sketch.yaml` records the build's options under `defines:`, one `NAME: value` per
-line, so a pump's measured floor or a normally-open valve sits in the file that describes the build
+`sketch.yaml` records the build's options under a profile's `defines:`, one `NAME: value` per line,
+so the board's pins or a pump's measured floor sit with the board and libraries that build has
 rather than in a command someone has to remember. A name is a knob's token without its `GARDENER_`
-prefix, and a knob the profile leaves out keeps the default beside its `GARDENER_KNOB_VALID`. The
+prefix, and a knob the block leaves out keeps the default beside its `GARDENER_KNOB_VALID`. The
 options are written to the sketch's `options.h`, which every `GARDENER_KNOB_VALID` in the tree
 reads through `core/Knob.h`. `--define NAME=VALUE` overrides one for a single run, and repeats.
 
@@ -214,7 +214,8 @@ def token(name):
 
 
 def build_options():
-    """The options a build is made with, one per token: the profile's, then `--define`'s on top.
+    """The options a build is made with, one per token: the profile's, then `--define`'s on top,
+    which replaces one the profile records rather than adding a second.
 
     A token appears once, because the preprocessor warns about a second #define of the same name.
     """
@@ -366,7 +367,7 @@ def info():
     """Print what a build is made of, as the files describe it: the profile sketch.yaml names, the
     board that profile's fqbn pins, the flash layout the board's partition scheme cuts, and the
     options the profile records."""
-    fqbn, options = sketch_project(profile())
+    fqbn, _ = sketch_project(profile())
     properties = build_properties(fqbn)
     offset, size = partition(properties)
     print(f"profile    {profile()}")
@@ -375,6 +376,7 @@ def info():
     for name, subtype, start, length in layout(properties):
         print(f"  {name:<10} {subtype:<9} {hex(start):>10} {length // 1024:>6} KB")
     print(f"page image {hex(offset)} + {size // 1024} KB")
+    options = [f"{name}={value}" if value else name for name, value in build_options().items()]
     print(f"options    {' '.join(options) if options else '(none: the defaults in the library)'}")
 
 

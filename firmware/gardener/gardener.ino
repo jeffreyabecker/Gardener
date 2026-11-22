@@ -12,12 +12,16 @@
 
 namespace {
 
-// The rig this build is wired to. The libraries take the pins, so a board variant is this block and
-// nothing else.
+// The board this build is wired to. sketch.yaml names the pins and the wrapper writes them into
+// options.h, so a board variant is that block and nothing else: the libraries take the pins.
+#if !defined(GARDENER_PIN_SENSOR_ADC) || !defined(GARDENER_PIN_PUMP) ||                            \
+    !defined(GARDENER_PIN_VENT_VALVE)
+#error "sketch.yaml must name PIN_SENSOR_ADC, PIN_PUMP and PIN_VENT_VALVE under defines:"
+#endif
 constexpr gardener::MachinePins Board{
-    .sensorAdc = 10,
-    .pump = 8,
-    .ventValve = 9,
+    .sensorAdc = GARDENER_PIN_SENSOR_ADC,
+    .pump = GARDENER_PIN_PUMP,
+    .ventValve = GARDENER_PIN_VENT_VALVE,
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain

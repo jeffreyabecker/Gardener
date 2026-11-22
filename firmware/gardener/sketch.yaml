@@ -19,25 +19,23 @@ default_profile: no-ble
 # library manager was left holding. A profile build excludes the globally installed libraries, so
 # everything it needs is named here.
 #
+# Each records the build's options under `defines:`, one `NAME: value` per line, where a name is a
+# knob's token without its `GARDENER_` prefix: the pins the sketch wires its parts to, then the
+# numbers a different pump or valve changes. arduino-cli has no such field and ignores the block,
+# and its own `profile create` and `profile lib` commands rewrite this file without it, so the block
+# is kept by hand, and a board built with both links records its options in both.
+#
 # `no-ble` is the default: the serial and web device, with no library the tree does not hold. `ble`
 # is the same firmware plus the Bluetooth stack, the one library the tree does not hold, and the
 # link compiles to a stub in the default build because BleLink.h looks for the stack's headers
 # rather than a define.
-#
-# A profile may also record the build's options under `defines:`, one `NAME: value` per line, where
-# a name is a knob's token without its `GARDENER_` prefix — the pump's measured floor, a
-# normally-open valve — so the options a build is made with sit beside the board and libraries that
-# build has. scripts/arduino.py reads the block and writes it to the sketch's options.h.
-# arduino-cli has no such field and ignores the block, and its own `profile create` and `profile
-# lib` commands rewrite this file without it, so the block is kept by hand and belongs to the one
-# profile it describes: a build with both links records its options in both.
-#
-#     defines:
-#       CONTROL_FLOOR_KPA: 55.0f
-#       VALVE_NORMALLY_OPEN: 1
 profiles:
   ble:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    defines:
+      PIN_SENSOR_ADC: 10
+      PIN_PUMP: 8
+      PIN_VENT_VALVE: 9
     platforms:
       - platform: esp32:esp32 (3.0.3)
         platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
@@ -46,6 +44,10 @@ profiles:
       - NimBLE-Arduino (2.5.1)
   no-ble:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    defines:
+      PIN_SENSOR_ADC: 10
+      PIN_PUMP: 8
+      PIN_VENT_VALVE: 9
     platforms:
       - platform: esp32:esp32 (3.0.3)
         platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
