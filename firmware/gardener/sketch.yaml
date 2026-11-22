@@ -1,4 +1,5 @@
-# Pin the board so `arduino-cli compile firmware/gardener` needs no FQBN.
+# Pin the board so `arduino-cli compile firmware/gardener` needs no FQBN, and so scripts/arduino.py
+# has the one the build resolves to ask for the partition table the page image is written with.
 #
 # The S3 needs both options spelled out. USBMode=hwcdc routes USB to the chip's
 # USB-Serial-JTAG CDC, which is the peripheral on GPIO19/20 that both the ROM downloader
@@ -20,6 +21,18 @@ default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,Parti
 # is the same firmware plus the Bluetooth stack, the one library the tree does not hold, and the
 # link compiles to a stub in the default build because BleLink.h looks for the stack's headers
 # rather than a define.
+#
+# A profile may also record the build's options under `defines:`, one `NAME: value` per line, where
+# a name is a knob's token without its `GARDENER_` prefix — the pump's measured floor, a
+# normally-open valve — so the options a build is made with sit beside the board and libraries that
+# build has. scripts/arduino.py reads the block and writes it to the sketch's options.h.
+# arduino-cli has no such field and ignores the block, and its own `profile create` and `profile
+# lib` commands rewrite this file without it, so the block is kept by hand and belongs to the one
+# profile it describes: a build with both links records its options in both.
+#
+#     defines:
+#       CONTROL_FLOOR_KPA: 55.0f
+#       VALVE_NORMALLY_OPEN: 1
 profiles:
   ble:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default

@@ -227,13 +227,17 @@ Bluetooth link and the tasks that drive them. The web link uses the ESP-IDF HTTP
 `DNSServer`, `LittleFS` and `ESPmDNS` from the core, so it brings no extra library; the Bluetooth
 link is the one that does.
 
-A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
-define set, so the next one compiles only what changed since, header dependents included.
+A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per profile and
+board, so the next one compiles only what changed since, header dependents included.
 
-The rig's numbers are written to a generated `firmware/gardener/rig_options.h` rather than passed
-as compiler flags, so retuning a rig recompiles the files that read them and nothing else. The
-header `core/knob_defaults.h` beside `core/Knob.h` is generated the same way, by `tools/knob.py`
-from the `GARDENER_KNOB_VALID` calls, and both build paths write it before they compile.
+The build's options are written to a generated `firmware/gardener/options.h` rather than passed as
+compiler flags, so changing one recompiles the files that read it and nothing else. A profile
+records them under `defines:` in
+[firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml), one `NAME: value` per line, which
+[scripts/arduino.py](./scripts/arduino.py) reads and writes into that header; `--define` overrides
+one for a single run. The header `core/knob_defaults.h` beside `core/Knob.h` is generated the same
+way, by `tools/knob.py` from the `GARDENER_KNOB_VALID` calls, and both build paths write it before
+they compile.
 
 ## Unit tests
 

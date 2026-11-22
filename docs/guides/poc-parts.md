@@ -243,15 +243,17 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
 * The sensor's range is -100 kPa, so a pump that pulls deeper saturates the reading. Check the
   pump's ultimate vacuum on its datasheet; a single-stage diaphragm pump lands inside the sensor,
   a two-stage one may not.
-* The pump's measured reach is `CONTROL_FLOOR_KPA`, so build with it once you have measured it —
-  `--define CONTROL_FLOOR_KPA=<kPa>`. The fitted valve is normally closed, so it is energised to
-  vent and a power loss seals the chamber; `--define VALVE_NORMALLY_OPEN=1` inverts that for a
-  normally open part, which is the fail-safe direction but holds no vacuum through a power loss.
-  The pump is a switch: the loop runs it flat out or not at all and holds a band of
-  `CONTROL_BELOW_PERCENT` under the target and `CONTROL_ABOVE_PERCENT` over it, so how tightly a
-  build holds is those two numbers rather than a gain. Every one of these is a knob named without
-  its `GARDENER_` prefix — the preprocessor token behind `--define CONTROL_FLOOR_KPA` is
-  `GARDENER_CONTROL_FLOOR_KPA` — so `core/knob_defaults.h` is where a default is read.
+* The pump's measured reach is `CONTROL_FLOOR_KPA`, so record it once you have measured it —
+  `CONTROL_FLOOR_KPA: <kPa>` under `defines:` in the build's profile in
+  [sketch.yaml](../../firmware/gardener/sketch.yaml), or `--define CONTROL_FLOOR_KPA=<kPa>` for a
+  single build. The fitted valve is normally closed, so it is energised to vent and a power loss
+  seals the chamber; `VALVE_NORMALLY_OPEN: 1` inverts that for a normally open part, which is the
+  fail-safe direction but holds no vacuum through a power loss. The pump is a switch: the loop runs
+  it flat out or not at all and holds a band of `CONTROL_BELOW_PERCENT` under the target and
+  `CONTROL_ABOVE_PERCENT` over it, so how tightly a build holds is those two numbers rather than a
+  gain. Every one of these is a knob named without its `GARDENER_` prefix — the preprocessor token
+  behind `CONTROL_FLOOR_KPA` is `GARDENER_CONTROL_FLOOR_KPA` — so `core/knob_defaults.h` is where a
+  default is read.
 * The MCU's 5V pin is the 12 V → 5 V buck's output. Check the Super Mini for a Schottky between
   USB VBUS and that pin; if it has none, use a cable with VBUS cut or unplug USB while the 12 V is
   on. Two 5 V sources on one pin is not a fault the board protects you from.
