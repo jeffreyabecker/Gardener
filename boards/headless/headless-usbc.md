@@ -12,10 +12,10 @@ JLCPCB loads a basic part for nothing and charges about $3 for each extended par
 
 | Part | Part number | LCSC | Class | Qty | Unit | KiCad footprint | For |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ESP32-C3 module | ESP32-C3-MINI-1-N4 | C2838502 | extended | 1 | $3.07 | — | the controller |
+| ESP32-C3 module | ESP32-C3-MINI-1-N4 | C2838502 | extended | 1 | $3.07 | `Espressif:ESP32-C3-MINI-1` | the controller |
 | USB-C socket | TYPE-C-31-M-12 | C165948 | extended | 1 | $0.19 | `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12` | power in, programming, console |
-| Pressure sensor | WF100E 1BG S6 DA 0.2N4.7 AT | C22388669 | extended | 1 | $1.30 | — | −100…0 kPa, analogue out |
-| JST-XH connector | XH-2P | C688873 | extended | 2 | $0.07 | — | pump and valve leads |
+| Pressure sensor | WF100E 1BG S6 DA 0.2N4.7 AT | C22388669 | extended | 1 | $1.30 | `EasyEDA:SOP-6_L7.0-W7.0-P2.54-LS10.3-TL-CW` | −100…0 kPa, analogue out |
+| JST-XH connector | XH-2P | C688873 | extended | 2 | $0.07 | `EasyEDA:CONN-SMD_XH-2P` | pump and valve leads |
 | ESD array | TPUSBLC6-4SC6 | C558419 | extended | 1 | $0.04 | `Package_TO_SOT_SMD:SOT-23-6` | ESD on D+ and D− |
 | Polyfuse | BSMD1206-110-16V | C2803346 | extended | 1 | $0.06 | `Fuse:Fuse_1206_3216Metric` | load-rail fuse |
 | N-channel MOSFET | AO3400A | C20917 | basic | 2 | $0.08 | `Package_TO_SOT_SMD:SOT-23` | low-side switch per load |
@@ -31,7 +31,7 @@ JLCPCB loads a basic part for nothing and charges about $3 for each extended par
 | Resistor 22 Ω 0603 | 0603WAF220JT5E | C23345 | basic | 2 | $0.002 | `Resistor_SMD:R_0603_1608Metric` | USB series |
 | Resistor 100 Ω 0603 | 0603WAF1000T5E | C22775 | basic | 2 | $0.002 | `Resistor_SMD:R_0603_1608Metric` | gates |
 | Resistor 1 kΩ 0603 | 0603WAF1001T5E | C21190 | basic | 1 | $0.002 | `Resistor_SMD:R_0603_1608Metric` | LED |
-| Tact switch | TS-1187A-B-A-B | C318884 | basic | 2 | $0.02 | — | BOOT and RESET |
+| Tact switch | TS-1187A-B-A-B | C318884 | basic | 2 | $0.02 | `EasyEDA:SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5-TL_H1.5` | BOOT and RESET |
 | LED | NCD0805R1 | C84256 | basic | 1 | $0.01 | `LED_SMD:LED_0805_2012Metric` | power |
 | Header, 0.1" 3-pin | — | — | — | 1 | — | `Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical` | UART0 console, unpopulated |
 
@@ -42,10 +42,7 @@ stencil and setup, so a batch lands near **$9–10 a board**.
 
 - **ESP32-C3-MINI-1-N4** — the antenna keepout overhangs the board edge.
 - **WF100E** — 0.2–4.7 V analogue output, halved by two 10 kΩ into the C3's 2.5 V ADC input; 1 nF
-  from output to ground; the nozzle and land pattern come from the drawing.
-- **JST-XH 2-pin SMD** — the through-hole `S2B-XH-A` is the alternative if the SMD pattern is not
-  drawn.
-- **TS-1187A-B-A-B** — draw its land pattern, or use a TL3342 or PTS645, whose footprints exist.
+  from output to ground.
 - **TPUSBLC6-4SC6** — 5 V standoff at 0.35 pF; the basic TVS parts clamp at 10.5–11.2 V, too high
   for a 3.3 V pair.
 - **AMS1117-3.3** — pin 1 ground, pin 2 the tab and the output, pin 3 in.
