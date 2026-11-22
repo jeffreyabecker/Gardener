@@ -43,7 +43,7 @@ few cents if they are not, and neither is in the total.
 ### Wiring
 
 ```
-PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + GND   (OUT → GPIO5)
+PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + GND   (OUT → GPIO10)
 (via USB-C) │                               ├─ OLED       SDA + SCL   (Wire1, 17/18)
             │                               └─ keys       74HC165 (SH/LD, CLK, Q7)
             └─ 3.3 V buck ── DRV8833 VM ─┬─ channel A ── pump
@@ -53,14 +53,14 @@ PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + 
 ```
 
 ```
-GPIO  5               ADC     XGZP6847A OUT (ADC1 channel 4)
+GPIO 10               ADC     XGZP6847A OUT (ADC1 channel 9)
 GPIO 17 18            I2C     panel 0x3C (Wire1)
 GPIO  8               pump
 GPIO  9               valve
-GPIO 10 11  1         keys: 74HC165 SH/LD, CLK, Q7 (six keys)
+GPIO  6 11  1         keys: 74HC165 SH/LD, CLK, Q7 (six keys)
 GPIO  4               battery sense (reserved)
 GPIO 12               buzzer (passive piezo)
-GPIO  2  6  7 13 14 15 16   spare
+GPIO  2  7 13 14 15 16   spare
 ```
 
 The sensor is a bare 6-DIP: pin 1 is N/C, pins 2 and 4 are VDD, pins 3 and 6 are GND, and pin 5

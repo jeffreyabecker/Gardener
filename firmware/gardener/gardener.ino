@@ -15,7 +15,7 @@ namespace {
 // The rig this build is wired to. The libraries take the pins, so a board variant is this block and
 // nothing else.
 constexpr gardener::MachinePins Board{
-    .sensorAdc = 5,
+    .sensorAdc = 10,
     .pump = 8,
     .ventValve = 9,
 };
