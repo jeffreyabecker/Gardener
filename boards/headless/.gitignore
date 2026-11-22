@@ -1,0 +1,10 @@
+# KiCad's own working files: per-user local settings, project backups, the footprint cache and the
+# editor locks. None of them belongs in a commit; the schematics, boards and library tables do.
+*.kicad_prl
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+fp-info-cache
+_autosave-*
+*.lck
+.history/
