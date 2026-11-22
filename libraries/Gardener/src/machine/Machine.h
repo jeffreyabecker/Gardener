@@ -27,12 +27,12 @@ GARDENER_KNOB_VALID(float, ControlAbovePercent, GARDENER_CONTROL_ABOVE_PERCENT, 
                     GARDENER_CONTROL_ABOVE_PERCENT > 0.0f,
                     "how far past the target the valve opens, in percent of it");
 
-// --- The rig's own numbers ---------------------------------------------------
+// --- The build's options -----------------------------------------------------
 // What a different pump, chamber or valve changes. These are facts about the build rather than
-// preferences a running device holds, so each is a knob: the value here is the fitted rig's,
-// measured on the bench, and a build for another rig sets its own by generating the sketch's
-// `rig_options.h` (see scripts/arduino.py's `--define`). Neither link carries them, because nothing
-// changes one at run time.
+// preferences a running device holds, so each is a knob: the value here is the fitted build's,
+// measured on the bench, and another build sets its own by generating the sketch's `options.h`
+// (see scripts/arduino.py's `--define`). Neither link carries them, because nothing changes one at
+// run time.
 //
 // The header rather than a define on the command line, because a define there is part of
 // arduino-cli's build options: changing one throws away every object in the build path, the
@@ -41,9 +41,9 @@ GARDENER_KNOB_VALID(float, ControlAbovePercent, GARDENER_CONTROL_ABOVE_PERCENT, 
 GARDENER_KNOB_VALID(float, ControlFloorKpa, GARDENER_CONTROL_FLOOR_KPA, 60.0f,
                     GARDENER_CONTROL_FLOOR_KPA > 0.0f && GARDENER_CONTROL_FLOOR_KPA <= 100.0f,
                     "the floor stays inside the sensor's range");
-// The part fitted to this rig is normally closed: the coil has to be energised to vent, and a
+// The part fitted to this build is normally closed: the coil has to be energised to vent, and a
 // power loss seals the chamber instead of releasing it. Building with this false is what inverts
-// that, and it is the one place the rig's valve is named.
+// that, and it is the one place the fitted valve is named.
 GARDENER_KNOB_VALID(bool, ValveNormallyOpen, GARDENER_VALVE_NORMALLY_OPEN, false, true,
                     "true only for a normally open solenoid: de-energised vents");
 
@@ -61,7 +61,7 @@ GARDENER_KNOB_VALID(uint32_t, ControlMaxRunMs, GARDENER_CONTROL_MAX_RUN_MS, 7200
 GARDENER_KNOB_VALID(float, VentMarginKpa, GARDENER_VENT_MARGIN_KPA, 2.0f,
                     GARDENER_VENT_MARGIN_KPA >= 0.0f,
                     "close enough to the vent floor to be released, in kPa");
-// The depth this rig settles at with the valve open, measured on the bench. A chamber with the
+// The depth this build settles at with the valve open, measured on the bench. A chamber with the
 // valve open does not reach ambient: the tube, the orifice and the sensor's offset leave it a
 // little above zero, so the release criterion is this floor rather than 0.
 GARDENER_KNOB_VALID(float, VentFloorKpa, GARDENER_VENT_FLOOR_KPA, 1.0f,
@@ -99,7 +99,7 @@ GARDENER_KNOB_VALID(uint8_t, ControlOvershootRecoveries, GARDENER_CONTROL_OVERSH
                     "how many vent-back recoveries a run allows before an overshoot faults");
 
 // The pins the machine's parts are wired to. The sketch names them and the composition builds the
-// parts from them, so this library carries no board: a different rig is a different set of numbers.
+// parts from them, so this library carries no board: another wiring is another set of pins.
 struct MachinePins {
   uint8_t sensorAdc;
   uint8_t pump;

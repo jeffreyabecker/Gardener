@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "core/WifiControl.h"
+#include "WifiControl.h"
 
 namespace gardener::test {
 

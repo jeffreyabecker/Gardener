@@ -12,8 +12,11 @@ class SerialLink;
 
 namespace gardener::runtime {
 
+class BleLink;
+
 // The composition spawns the control and interface tasks, pinned to their cores. The queue the
 // link posts into is built by the composition before either task runs and handed here, so the task
-// that drains it and the link that fills it hold the same object.
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link);
+// that drains it and the link that fills it hold the same object. The Bluetooth link is stepped on
+// the same interface pass and is null in a build without one.
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* bluetooth);
 }  // namespace gardener::runtime

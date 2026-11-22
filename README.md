@@ -1,27 +1,29 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
-then vents it — driven over a serial line and a web page.
+then vents it — driven over a serial line, a web page and a Bluetooth link.
 
-The serial line and the WiFi page are the ways in. A controller sets a depth and the machine pulls
-to it; a vent releases the chamber; a reset clears a fault. What the device owns is what has to
-happen when nobody is watching: holding the target, and venting the chamber through one path on
-stop, abort or fault. Pressures are kPa below ambient, on both wires and in the firmware.
+The serial line, the WiFi page and the Bluetooth link are the ways in. A controller sets a depth
+and the machine pulls to it; a vent releases the chamber; a reset clears a fault. What the device
+owns is what has to happen when nobody is watching: holding the target, and venting the chamber
+through one path on stop, abort or fault. Pressures are kPa below ambient, on every wire and in the
+firmware.
 
 The device is the machine — pump, sensor and vent valve. One sketch,
 [firmware/gardener](./firmware/gardener), composes the libraries for it: what it names is what the
-device has, over the serial link and the web link it builds.
+device has, over the serial, web and Bluetooth links it builds.
 
 ## Wire
 
-Four verbs for the machine on a line ending in LF, and one word for the network:
+Every line on the port ends in LF and begins with a prefix: `sys` is the machine's, `wifi` is the
+network's, and a build serves exactly the prefixes it registers.
 
 | command | answer |
 | --- | --- |
-| `get` | `ok pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
-| `set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
-| `vent` | `ok state=VENT` |
-| `reset` | `ok state=IDLE` — clears a latched fault |
+| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `sys set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
+| `sys vent` | `ok state=VENT` |
+| `sys reset` | `ok state=IDLE` — clears a latched fault |
 | `wifi` | `ok ssid=<name> mode=<sta\|ap\|ap+sta> ip=<address> keep_ap=<0\|1>` |
 | `wifi scan` | `ok count=<n>`, then one line per network: `ssid0=<name> rssi0=<dBm>` |
 | `wifi ssid <name>` | `ok ssid=<name>` — the rest of the line is the name, and it is stored |
@@ -30,11 +32,14 @@ Four verbs for the machine on a line ending in LF, and one word for the network:
 | `wifi join` | the status line, after the stored network is applied |
 | `wifi forget` | the status line, after the stored network is cleared |
 
+A first word nothing serves is `err unknown_prefix <word>`, and a word under a registered prefix
+that its plugin does not know is `err bad_argument <word>`.
+
 A set is a target and a run in one command, and the run is granted the machine's own ceiling
-(two hours). Zero is the ambient target, which releases the chamber, so `set 0` and `set -` vent.
-A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready` when
-the machine has no reading or a latched fault. The boot and run lines the firmware logs share the
-same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
+(two hours). Zero is the ambient target, which releases the chamber, so `sys set 0` and `sys set -`
+vent. A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready`
+when the machine has no reading or a latched fault. The boot and run lines the firmware logs share
+the same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
 
 The network is set a field at a time, and `wifi join` is what applies what is stored; a join with
 nothing stored is `err no_network`. Each field is written to the board's filesystem as it is given,
@@ -45,9 +50,11 @@ answers nothing while the radio is joining, and its list is one line per network
 cannot carry a street's worth of names in one write.
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
-unprompted — `hb pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code|none>`, the
-`get` fields without the `ok` — so a controller can tell a quiet machine from a dead one
-without polling. Its own word keeps it clear of the replies a controller is waiting for.
+unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z>
+fault=<code|none>`, the `sys get` fields without the `ok` — so a controller can tell a quiet machine
+from a dead one without polling. Its own word keeps it clear of the replies a controller is waiting
+for. Every status line carries `uptime_ms`, the milliseconds since boot at the instant the reading
+was copied, so a controller can place two of them in time.
 
 ## Web
 
@@ -56,7 +63,7 @@ serves a page tree at `/` and the API the page drives over the same four verbs:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `ok=1&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
 | `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
 | `POST /api/vent` | `ok=1&state=VENT` |
 | `POST /api/reset` | `ok=1&state=IDLE` |
@@ -122,6 +129,69 @@ The network the board stores lives in the same partition, at `/wifi.conf` outsid
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
 new image: re-flashing the page tree brings the setup access point back.
 
+## Bluetooth
+
+A phone or a laptop beside the rig can reach the machine over Bluetooth LE without a network or an
+address, in a build with the `ble` profile; the default build leaves the stack out. The device
+advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own address, and serves
+one GATT service over the same control the wire and the page ask. Every characteristic requires an
+encrypted, bonded link.
+
+| what | UUID | properties |
+| --- | --- | --- |
+| service | `6d3a0000-6a3f-4d1c-9d5b-9e0f4c7a2b31` | — |
+| status | `6d3a0001-6a3f-4d1c-9d5b-9e0f4c7a2b31` | read, notify |
+| command | `6d3a0002-6a3f-4d1c-9d5b-9e0f4c7a2b31` | write |
+| reply | `6d3a0003-6a3f-4d1c-9d5b-9e0f4c7a2b31` | read, notify |
+
+Everything is little-endian, and floats are IEEE-754 binary32.
+
+**Status** — 18 bytes, readable at any time and notified every five seconds and at once when the
+state or the target moves.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 4 | `uptime_ms` — milliseconds since boot when the reading was copied |
+| 4 | 4 | `pressure_kpa` — depth below ambient, 0 at ambient |
+| 8 | 4 | `target` — depth below ambient, 0 is the ambient target |
+| 12 | 4 | `duty_percent` |
+| 16 | 1 | `state` — 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
+| 17 | 1 | `fault` — the code table below, 0 when nothing is latched |
+
+**Command** — a write with a response: one byte for `vent` and `reset`, five for `set`.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 1 | `op` — 1 set, 2 vent, 3 reset |
+| 1 | 4 | `target_kpa` — only when `op` is 1 |
+
+**Reply** — two bytes, notified when the write is served and readable afterwards.
+
+| offset | size | field |
+| --- | --- | --- |
+| 0 | 1 | `result` — 0 ok, 1 released, 2 below range, 3 above range, 4 not ready, 5 bad command |
+| 1 | 1 | `refusal` — 0 none, 1 latch, 2 no reading, 3 unknown |
+
+The codes are the machine's words written as numbers:
+
+| fault | code | | refusal | code |
+| --- | --- | --- | --- | --- |
+| nothing latched | 0 | | nothing | 0 |
+| `sensor` | 1 | | `latch` | 1 |
+| `vent_timeout` | 2 | | `no_reading` | 2 |
+| `overshoot` | 3 | | anything else | 3 |
+| `no_progress` | 4 | | | |
+| anything else | 5 | | | |
+
+A write of any other length or opcode answers `bad command` and queues nothing, and so does a
+five-byte `vent` or `reset`: each command has one spelling. `set` is the machine's one command and
+answers what `sys set` answers — a target of 0 is `released`, and a refusal queues nothing.
+
+One client at a time: a second is refused while the first is connected, and the board advertises
+again on disconnect. Pairing is Just Works with the bond remembered, in NVS across a power cut. It
+buys an encrypted wire and a phone that reconnects without asking, and it authenticates nobody — the
+first client to pair gets the bond, and there is no button on the board to withdraw it.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
@@ -132,7 +202,12 @@ python scripts/arduino.py --task build
 python scripts/arduino.py --task upload --port COM5
 python scripts/arduino.py --task data --port COM5
 python scripts/arduino.py --task monitor --port COM5
+python scripts/arduino.py --task info
 ```
+
+`--task info` prints what a build is made of without touching a board: the profile, the board that
+profile's FQBN pins, the flash layout that board's partition scheme cuts, and the options the
+profile records.
 
 `--task upload` writes the page image as well as the sketch, and `--task data` writes the image on
 its own. The image is built with the core's `mklittlefs` and written with its `esptool` at the
@@ -145,20 +220,28 @@ template.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
-without which `Serial` is UART0 and a USB cable sees nothing. The build uses
-`--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the control
-law, the serial link and the three drivers that fill its parts — is the firmware rather than a
-sketchbook copy. The board it runs on sits beside the sketch in
-[firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link and
-the tasks that drive them. The web link uses the ESP-IDF HTTP server, `DNSServer`, `LittleFS` and
-`ESPmDNS` from the core, so there is no extra library to install.
+without which `Serial` is UART0 and a USB cable sees nothing. The build compiles the `no-ble`
+profile there, which pins the platform and
+[libraries/Gardener](./libraries/Gardener) — the machine, the control law, the serial link and the
+three drivers that fill its parts — by path. `--profile ble` adds NimBLE-Arduino 2.5.1, the one
+library the tree does not hold, and with it the Bluetooth link; the sketch's `build_opt.h` sets
+NimBLE's one-client connection limit in that build. Without the stack the link compiles to a stub,
+because `BleLink.h` asks for the stack's headers rather than a define. The board it runs on sits beside the sketch in
+[firmware/gardener](./firmware/gardener): the composition root, the parts builder, the web link, the
+Bluetooth link and the tasks that drive them. The web link uses the ESP-IDF HTTP server,
+`DNSServer`, `LittleFS` and `ESPmDNS` from the core, so it brings no extra library; the Bluetooth
+link is the one that does.
 
-A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
-define set, so the next one compiles only what changed since, header dependents included.
+A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per profile and
+board, so the next one compiles only what changed since, header dependents included.
 
-The rig's numbers are written to a generated `firmware/gardener/rig_options.h` rather than passed
-as compiler flags, so retuning a rig recompiles the files that read them and nothing else. The
-header `core/knob_defaults.h` beside `core/Knob.h` is generated the same way, by `tools/knob.py`
+The build's options are written to a generated `firmware/gardener/options.h` rather than passed as
+compiler flags, so changing one recompiles the files that read it and nothing else. Each profile in
+[firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) records its build's options under
+`defines:`, one `NAME: value` per line — the three pins the sketch wires its parts to, then the
+numbers a different pump or valve changes. [scripts/arduino.py](./scripts/arduino.py) reads the
+selected profile's block and writes it into the header; `--define` overrides one for a single run.
+The header `core/knob_defaults.h` beside `core/Knob.h` is generated the same way, by `tools/knob.py`
 from the `GARDENER_KNOB_VALID` calls, and both build paths write it before they compile.
 
 ## Unit tests

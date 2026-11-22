@@ -6,7 +6,7 @@
 //                       GARDENER_GESTURE_QUEUE_DEPTH > 0, "a queue of nothing refuses every gesture");
 //
 // The value is the token. core/knob_defaults.h gives every token its default inside an #ifndef, so a
-// build replaces one by defining it first — the sketch's rig_options.h, written from `--define`.
+// build replaces one by defining it first — the sketch's options.h, written from `--define`.
 // The default is also an argument, read by tools/knob.py to write that header: a macro cannot apply
 // it, because the test for "already defined" is a preprocessing directive and a replacement list
 // cannot contain one.
@@ -20,10 +20,10 @@
   GARDENER_KNOB(type, name, token);                                                                \
   static_assert(assertion, message)
 
-// The rig's own numbers come first: rig_options.h holds the define for each knob this rig retunes,
-// and the generated defaults fill in the ones it does not.
-#if __has_include("rig_options.h")
-#include "rig_options.h"
+// The build's options come first: options.h holds the define for each knob this build sets, and the
+// generated defaults fill in the ones it does not.
+#if __has_include("options.h")
+#include "options.h"
 #endif
 
 #include "core/knob_defaults.h"

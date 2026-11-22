@@ -1,7 +1,7 @@
 // Gardener - serial controllable vacuum pump controller.
 //
 // ESP32-S3 + CFSensor XGZP6847A + a vent valve. The machine is the three parts; the ways in are the
-// serial link and the WiFi page.
+// serial link, the WiFi page and the Bluetooth LE link.
 //
 // This sketch is the device's composition root: it names the board, builds the parts, the machine
 // and the links over them, and starts the tasks that drive them.
@@ -12,12 +12,16 @@
 
 namespace {
 
-// The rig this build is wired to. The libraries take the pins, so a board variant is this block and
-// nothing else.
+// The board this build is wired to. sketch.yaml names the pins and the wrapper writes them into
+// options.h, so a board variant is that block and nothing else: the libraries take the pins.
+#if !defined(GARDENER_PIN_SENSOR_ADC) || !defined(GARDENER_PIN_PUMP) ||                            \
+    !defined(GARDENER_PIN_VENT_VALVE)
+#error "sketch.yaml must name PIN_SENSOR_ADC, PIN_PUMP and PIN_VENT_VALVE under defines:"
+#endif
 constexpr gardener::MachinePins Board{
-    .sensorAdc = 5,
-    .pump = 8,
-    .ventValve = 9,
+    .sensorAdc = GARDENER_PIN_SENSOR_ADC,
+    .pump = GARDENER_PIN_PUMP,
+    .ventValve = GARDENER_PIN_VENT_VALVE,
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
@@ -32,21 +36,31 @@ void setup() {
 
   // The device, built in the order it is used: the log and the queue first, because the machine and
   // the control each hold one; then the parts the board wires, the machine over them, the control
-  // that any front end asks, the web link that is the radio, and the serial link over both.
+  // that any front end asks, the two radio links over that control, the two plugins the wire
+  // serves, and the serial link over them.
   static gardener::SerialLogger logger(Serial);
   static gardener::runtime::RtosCommandQueue commands;
   static const gardener::runtime::MachineParts parts = gardener::runtime::buildMachineParts(Board);
   static gardener::Machine machine(logger, parts.pump, parts.sensor, parts.valve);
   static gardener::SystemControl control(machine.vacuum(), commands);
   static gardener::runtime::WebLink web(control, logger);
-  static gardener::SerialLink link(Serial, serialAttached, logger, control, web);
+  static gardener::runtime::BleLink bluetooth(control, logger);
+  static gardener::SystemCommands system(control);
+  static gardener::runtime::WifiCommands wifi(web);
+  static gardener::SerialLink link(Serial, serialAttached, logger);
+
+  // The wire serves the parts this build has, each under its own prefix.
+  link.add(system);
+  link.add(wifi);
 
   machine.boot();
   link.begin();
   web.begin();
+  // A Bluetooth stack that will not start is a lost feature rather than an unbootable board.
+  bluetooth.begin();
 
-  // The control tick that services the chamber, and the interface task that answers the wire.
-  gardener::runtime::spawnMachineTasks(machine, commands, &link);
+  // The control tick that services the chamber, and the interface task that answers the links.
+  gardener::runtime::spawnMachineTasks(machine, commands, &link, &bluetooth);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

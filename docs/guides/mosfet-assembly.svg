@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 660" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="900" height="660" fill="#ffffff"/>
+
+  <text x="40" y="34" font-size="19" font-weight="700" fill="#1a1a1a">MOSFET assembly — one low-side switch for one load</text>
+  <text x="40" y="58" font-size="13" fill="#555555">Three wires in at the right and one JST out at the left. One channel of the wiring diagram, drawn on its own.</text>
+
+  <rect x="100" y="78" width="520" height="432" rx="12" fill="#fbfcfd" stroke="#9aa6b2" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="608" y="96" font-size="10" fill="#777777" text-anchor="end">one assembly — build two</text>
+
+  <circle cx="854" cy="110" r="4" fill="#c0392b"/>
+  <text x="860" y="100" font-size="11.5" font-weight="700" fill="#c0392b" text-anchor="end">V+5</text>
+  <circle cx="854" cy="370" r="4" fill="#2471a3"/>
+  <text x="860" y="360" font-size="11.5" font-weight="700" fill="#2471a3" text-anchor="end">CTL</text>
+  <circle cx="854" cy="470" r="4" fill="#1a1a1a"/>
+  <text x="860" y="460" font-size="11.5" font-weight="700" fill="#1a1a1a" text-anchor="end">GND</text>
+
+  <line x1="854" y1="110" x2="260" y2="110" stroke="#c0392b" stroke-width="2"/>
+  <circle cx="300" cy="110" r="3.2" fill="#1a1a1a"/>
+  <circle cx="260" cy="110" r="3.2" fill="#1a1a1a"/>
+  <line x1="260" y1="110" x2="260" y2="200" stroke="#c0392b" stroke-width="2"/>
+  <line x1="260" y1="200" x2="200" y2="200" stroke="#c0392b" stroke-width="2"/>
+
+  <line x1="300" y1="110" x2="300" y2="150" stroke="#c0392b" stroke-width="2"/>
+  <line x1="286" y1="150" x2="314" y2="150" stroke="#1a1a1a" stroke-width="2.4"/>
+  <polygon points="300,152 286,180 314,180" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="300" y1="180" x2="300" y2="240" stroke="#8e44ad" stroke-width="2"/>
+  <text x="318" y="146" font-size="10.5" fill="#555555">1N5819</text>
+
+  <line x1="200" y1="240" x2="300" y2="240" stroke="#8e44ad" stroke-width="2"/>
+  <circle cx="300" cy="240" r="3.2" fill="#8e44ad"/>
+  <line x1="300" y1="240" x2="300" y2="310" stroke="#8e44ad" stroke-width="2"/>
+
+  <rect x="140" y="180" width="60" height="75" rx="5" fill="#e8eef4" stroke="#343a40" stroke-width="1.5"/>
+  <line x1="140" y1="220" x2="200" y2="220" stroke="#9aa6b2" stroke-width="1"/>
+  <text x="188" y="194" font-size="9" fill="#343a40" text-anchor="end">1</text>
+  <text x="188" y="236" font-size="9" fill="#343a40" text-anchor="end">2</text>
+  <text x="170" y="172" font-size="10.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">JST 2-pin</text>
+  <text x="170" y="296" font-size="10" fill="#555555" text-anchor="middle">to pump / valve</text>
+
+  <line x1="854" y1="370" x2="600" y2="370" stroke="#2471a3" stroke-width="2"/>
+  <rect x="560" y="362" width="40" height="16" rx="3" fill="#ffffff" stroke="#2471a3" stroke-width="1.5"/>
+  <text x="580" y="352" font-size="10.5" fill="#555555" text-anchor="middle">100R</text>
+  <line x1="560" y1="370" x2="386" y2="370" stroke="#2471a3" stroke-width="2"/>
+  <circle cx="470" cy="370" r="3.2" fill="#1a1a1a"/>
+  <line x1="470" y1="370" x2="470" y2="400" stroke="#1a1a1a" stroke-width="1.5"/>
+  <rect x="462" y="400" width="16" height="40" rx="3" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.5"/>
+  <text x="454" y="426" font-size="10.5" fill="#555555" text-anchor="end">10k</text>
+  <line x1="470" y1="440" x2="470" y2="470" stroke="#1a1a1a" stroke-width="1.5"/>
+
+  <line x1="854" y1="470" x2="300" y2="470" stroke="#1a1a1a" stroke-width="1.5"/>
+  <circle cx="470" cy="470" r="3.2" fill="#1a1a1a"/>
+
+  <line x1="386" y1="370" x2="340" y2="370" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="340" y1="350" x2="340" y2="390" stroke="#1a1a1a" stroke-width="2.4"/>
+  <line x1="326" y1="350" x2="326" y2="362" stroke="#1a1a1a" stroke-width="3"/>
+  <line x1="326" y1="366" x2="326" y2="374" stroke="#1a1a1a" stroke-width="3"/>
+  <line x1="326" y1="378" x2="326" y2="390" stroke="#1a1a1a" stroke-width="3"/>
+  <line x1="326" y1="356" x2="300" y2="356" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="300" y1="356" x2="300" y2="310" stroke="#8e44ad" stroke-width="2"/>
+  <line x1="326" y1="384" x2="300" y2="384" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="300" y1="384" x2="300" y2="470" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="300" y1="370" x2="317" y2="370" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="300" y1="370" x2="300" y2="384" stroke="#1a1a1a" stroke-width="2"/>
+  <polygon points="325,370 316,365 316,375" fill="#1a1a1a"/>
+
+  <text x="363" y="362" font-size="9.5" font-weight="600" fill="#333333" text-anchor="middle">1 G</text>
+  <text x="292" y="304" font-size="9.5" font-weight="600" fill="#333333" text-anchor="end">2 D</text>
+  <text x="292" y="456" font-size="9.5" font-weight="600" fill="#333333" text-anchor="end">3 S</text>
+  <text x="282" y="338" font-size="11" font-weight="700" fill="#1a1a1a" text-anchor="end">Q1 · IRLZ44N</text>
+  <text x="282" y="352" font-size="10" fill="#555555" text-anchor="end">IRLB8721 also fine</text>
+
+  <g font-size="10.5" fill="#555555">
+    <text x="40" y="546">Pin 1 of the JST is V+5 and pin 2 is the switched low side, so it is the load's − terminal the FET pulls down. The diode's cathode goes</text>
+    <text x="40" y="566">to V+5 and its anode to the drain, so the winding's turn-off current loops through it rather than through the FET.</text>
+    <text x="40" y="592">Put the 10 k at the gate, not at CTL: a cut or unplugged CTL wire then still leaves the gate pulled down and the FET off, and the</text>
+    <text x="40" y="612">100 R still limits the pin's peak current into the gate capacitance.</text>
+    <text x="40" y="638">Red is the 5 V rail, blue the control line, purple the switched low side and black the star ground — the main diagram's colours.</text>
+  </g>
+</svg>

@@ -33,9 +33,11 @@ GARDENER_KNOB_VALID(uint16_t, HttpPort, GARDENER_HTTP_PORT, 80, GARDENER_HTTP_PO
                     "the port the page and the API are served on");
 GARDENER_KNOB_VALID(uint32_t, HttpStackBytes, GARDENER_HTTP_STACK_BYTES, 8192,
                     GARDENER_HTTP_STACK_BYTES >= 4096, "the httpd task's stack, in bytes");
+GARDENER_KNOB_VALID(UBaseType_t, WifiTaskPriority, GARDENER_WIFI_TASK_PRIORITY, 1,
+                    GARDENER_WIFI_TASK_PRIORITY <= 24, "a task priority below the config ceiling");
+GARDENER_KNOB_VALID(UBaseType_t, WifiTaskCore, GARDENER_WIFI_TASK_CORE, 0,
+                    GARDENER_WIFI_TASK_CORE <= 1, "the part has two cores");
 
-constexpr UBaseType_t WifiTaskPriority = 1;
-constexpr BaseType_t WifiTaskCore = 0;
 constexpr uint32_t TickMs = 20;
 constexpr const char* WwwRoot = "/www";
 constexpr const char* PagePath = "/www/index.html";
@@ -446,7 +448,9 @@ const char* WebLink::typeOf(const String& path) {
 esp_err_t WebLink::onStatus(httpd_req_t* request) {
   const SystemStatus now = from(request)->control_.status();
 
-  String body = "ok=1&pressure_kpa=";
+  String body = "ok=1&uptime_ms=";
+  body += String(now.uptimeMs);
+  body += "&pressure_kpa=";
   body += String(now.pressureKpa, 2u);
   body += "&target=";
   body += String(now.targetKpa, 1u);

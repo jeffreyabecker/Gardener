@@ -29,7 +29,9 @@ struct SystemStatus {
   float targetKpa = 0.0f;
   RunState state = RunState::Idle;
   float dutyPercent = 0.0f;
-  const char* fault = "";  // empty when nothing is latched
+  uint32_t uptimeMs = 0;     // milliseconds since boot when the reading was copied
+  uint32_t holdStartMs = 0;  // when the hold began, 0 while the system is not holding
+  const char* fault = "";    // empty when nothing is latched
 };
 
 class SystemControl {

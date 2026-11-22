@@ -73,6 +73,9 @@ class VacuumSystem {
   // The hold granted to the last run in whole seconds, 0 before the first start; the wire reports
   // it as 0 whenever nothing is running.
   uint32_t holdSeconds() const { return holdMs_ / 1000; }
+  // When the hold under way began, in millis, and 0 while the machine is not holding, so a reader
+  // times a hold from the instant it was entered rather than from when it first saw the state.
+  uint32_t holdStartMs() const { return state_ == RunState::Holding ? holdStartMs_ : 0; }
   // True once when the last run ended because its deadline expired; the run log names it.
   bool takeDeadlineExpired();
 
@@ -120,6 +123,9 @@ class VacuumSystem {
   uint32_t runStartMs_ = 0;
   uint32_t holdMs_ = 0;
   bool deadlineExpired_ = false;
+  // When the state last entered Holding. It is stamped in setState rather than by a caller, so the
+  // start that lands in the band and the beat that reaches it are both covered.
+  uint32_t holdStartMs_ = 0;
   // The pump's headway: the best depth it has reached since it came on, and when it last improved.
   uint32_t progressMs_ = 0;
   float bestDepthKpa_ = 0.0f;

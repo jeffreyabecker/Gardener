@@ -13,3 +13,7 @@
 #include <string.h>
 
 #include <ArduinoAPI.h>
+
+// The board's core names Printable in the global namespace, as it does Print and String; the API it
+// is built on names it in `arduino`, so the shim gives the firmware the name the board does.
+using arduino::Printable;
