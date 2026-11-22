@@ -12,7 +12,7 @@
 # FlashSize and PartitionScheme pin the layout a build and its image are made for, rather than
 # leaving it to whatever the board manager was set to: the platform's 4 MB default table, whose
 # spiffs row is the partition `--task data` writes the page image to.
-default_profile: no-ble
+default_profile: s3-wifi
 
 # The profiles the wrapper compiles. Each pins the board, the platform and the tree's own library by
 # path, for the same reason: the build is the tree's choice rather than whatever the machine's
@@ -25,12 +25,12 @@ default_profile: no-ble
 # and its own `profile create` and `profile lib` commands rewrite this file without it, so the block
 # is kept by hand, and a board built with both links records its options in both.
 #
-# `no-ble` is the default: the serial and web device, with no library the tree does not hold. `ble`
-# is the same firmware plus the Bluetooth stack, the one library the tree does not hold, and the
-# link compiles to a stub in the default build because BleLink.h looks for the stack's headers
-# rather than a define.
+# `s3-wifi` is the default: the ESP32-S3 with the serial and web device, and no library the tree
+# does not hold. `s3-wifi-ble` is the same firmware plus the Bluetooth stack, the one library the
+# tree does not hold, and the link compiles to a stub in the default build because BleLink.h looks
+# for the stack's headers rather than a define.
 profiles:
-  ble:
+  s3-wifi-ble:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
     defines:
       PIN_SENSOR_ADC: 10
@@ -42,7 +42,7 @@ profiles:
     libraries:
       - dir: ../../libraries/Gardener
       - NimBLE-Arduino (2.5.1)
-  no-ble:
+  s3-wifi:
     fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
     defines:
       PIN_SENSOR_ADC: 10

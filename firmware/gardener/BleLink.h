@@ -5,9 +5,10 @@
 #include "core/Logger.h"
 #include "machine/SystemControl.h"
 
-// Whether this build has the Bluetooth stack: the ble profile names NimBLE-Arduino and the no-ble
-// profile does not. It is asked of the headers rather than of a define, so a profile alone decides
-// it, and without the stack the link below is a stub that leaves the composition root the same.
+// Whether this build has the Bluetooth stack: the s3-wifi-ble profile names NimBLE-Arduino and the
+// s3-wifi profile does not. It is asked of the headers rather than of a define, so a profile alone
+// decides it, and without the stack the link below is a stub that leaves the composition root the
+// same.
 #if __has_include(<NimBLEDevice.h>)
 #include <NimBLEDevice.h>
 #define GARDENER_HAS_BLE 1
@@ -57,7 +58,7 @@ class BleLink {
 
 #else
 
-// The no-ble build's link: present so nothing around it needs a guard, and silent.
+// The s3-wifi build's link: present so nothing around it needs a guard, and silent.
 class BleLink {
  public:
   BleLink(SystemControl&, Logger&) {}

@@ -57,7 +57,7 @@ FLASH_PAGE = 256
 
 # `--profile`'s name, if one was given. Empty compiles the profile sketch.yaml's `default_profile`
 # names, so the script carries no profile of its own: the file is the one place a build's profile is
-# chosen, and `--profile ble` is how a second one is asked for.
+# chosen, and `--profile s3-wifi-ble` is how a second one is asked for.
 PROFILE = ""
 
 # Where the build's options are written. The header sits in the sketch because that folder is on the
