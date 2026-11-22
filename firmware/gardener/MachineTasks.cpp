@@ -16,7 +16,8 @@ namespace gardener::runtime {
 namespace {
 
 // Task configuration. The control task runs above the Arduino loop's default priority so the PID is
-// never preempted by a link or the screen, and both tasks are pinned to the one core this part has.
+// never preempted by a link or the screen. A part with one core runs every task and the loop on it,
+// so the core knobs default to 0 and a two-core board names core 1 for the tick in its profile.
 GARDENER_KNOB_VALID(UBaseType_t, ControlPriority, GARDENER_CONTROL_TASK_PRIORITY, 2,
                     GARDENER_CONTROL_TASK_PRIORITY <= 24,
                     "a task priority below the config ceiling");
@@ -32,9 +33,9 @@ GARDENER_KNOB_VALID(uint32_t, InterfaceStackWords, GARDENER_INTERFACE_TASK_STACK
                         GARDENER_INTERFACE_TASK_STACK_WORDS <= 65536,
                     "the interface task's stack, in words");
 GARDENER_KNOB_VALID(UBaseType_t, ControlCore, GARDENER_CONTROL_TASK_CORE, 0,
-                    GARDENER_CONTROL_TASK_CORE < 1, "the part has one core");
+                    GARDENER_CONTROL_TASK_CORE < portNUM_PROCESSORS, "a core this part has");
 GARDENER_KNOB_VALID(UBaseType_t, InterfaceCore, GARDENER_INTERFACE_TASK_CORE, 0,
-                    GARDENER_INTERFACE_TASK_CORE < 1, "the part has one core");
+                    GARDENER_INTERFACE_TASK_CORE < portNUM_PROCESSORS, "a core this part has");
 
 // The control task's own state: the tick it steps. Everything a tick decides — the last state
 // logged, the vent's start, the queue it drains — is the tick's, so this file keeps only the beat.

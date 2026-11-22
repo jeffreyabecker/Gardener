@@ -2,11 +2,13 @@
 # none is asked for. scripts/arduino.py reads the selected profile's fqbn to ask for the partition
 # table the page image is written with, so a build and its image describe the same flash.
 #
-# The C3 has one USB peripheral and no option to choose it with: the USB-Serial-JTAG CDC on GPIO18
-# and GPIO19 is the only USB the chip has, and both the ROM downloader and the sketch use it.
-# CDCOnBoot=cdc is not optional: it maps Serial to that CDC, so `(bool)Serial` is a real
-# host-presence signal and esptool uploads keep working over the same cable. Without it Serial is
-# UART0 on GPIO21/20 and the interface never reaches the USB-C socket.
+# Two boards are built for, and each needs its USB options spelled out. On the S3, USBMode=hwcdc
+# routes USB to the chip's USB-Serial-JTAG CDC, which is the peripheral on GPIO19/20 that both the
+# ROM downloader and the sketch share. The C3 has one USB peripheral and no option to choose it
+# with: the USB-Serial-JTAG CDC on GPIO18/19 is the only USB the chip has. CDCOnBoot=cdc is not
+# optional on either: it maps Serial to that CDC, so `(bool)Serial` is a real host-presence signal
+# and esptool uploads keep working over the same cable. Without it Serial is UART0 — on GPIO43/44
+# on the S3 and on GPIO21/20 on the C3 — and the interface never reaches the USB-C socket.
 #
 # FlashSize and PartitionScheme pin the layout a build and its image are made for, rather than
 # leaving it to whatever the board manager was set to: the platform's 4 MB default table, whose
@@ -19,20 +21,22 @@ default_profile: c3-wifi
 # everything it needs is named here.
 #
 # Each records the build's options under `defines:`, one `NAME: value` per line, where a name is a
-# knob's token without its `GARDENER_` prefix: the pins the sketch wires its parts to, then the
-# numbers a different pump or valve changes. arduino-cli has no such field and ignores the block,
-# and its own `profile create` and `profile lib` commands rewrite this file without it, so the block
-# is kept by hand, and a board built with both links records its options in both.
+# knob's token without its `GARDENER_` prefix: the board's pins, the core its control tick takes,
+# then the numbers a different pump or valve changes. arduino-cli has no such field and ignores the
+# block, and its own `profile create` and `profile lib` commands rewrite this file without it, so
+# the block is kept by hand, and a board built with both links records its options in both.
 #
-# The pins are three of the four the Super Mini breaks out with no other duty: GPIO0 is the ADC the
-# sensor's output is read on, and GPIO1 and GPIO3 drive the pump and the valve. The chip has one
-# core, so both tasks and the Arduino loop share it; the priority gap between them, rather than a
-# core each, is what keeps the control tick ahead of the links.
+# The pins are the board's, and each profile's block is its own board's. On the Super Mini they are
+# three of the four it breaks out with no other duty: GPIO0 is the ADC the sensor's output is read
+# on, and GPIO1 and GPIO3 drive the pump and the valve. On the S3 they are GPIO10 for the sensor and
+# GPIO8 and GPIO9 for the pump and the valve. The C3 has one core, so its profiles leave every task
+# on core 0; the S3 keeps the control tick alone on core 1, which its profiles record.
 #
-# `c3-wifi` is the default: the ESP32-C3 Super Mini with the serial and web device, and no library
-# the tree does not hold. `c3-wifi-ble` is the same firmware plus the Bluetooth stack, the one
-# library the tree does not hold, and the link compiles to a stub in the default build because
-# BleLink.h looks for the stack's headers rather than a define.
+# Four profiles, a board each with the two links: `c3-wifi` and `s3-wifi` are the serial and web
+# device with no library the tree does not hold, and each board's `-ble` profile is the same
+# firmware plus the Bluetooth stack, that library. `c3-wifi` is the default. The link compiles to a
+# stub in a build without the stack because BleLink.h looks for the stack's headers rather than a
+# define.
 profiles:
   c3-wifi-ble:
     fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
@@ -52,6 +56,31 @@ profiles:
       PIN_SENSOR_ADC: 0
       PIN_PUMP: 1
       PIN_VENT_VALVE: 3
+    platforms:
+      - platform: esp32:esp32 (3.0.3)
+        platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    libraries:
+      - dir: ../../libraries/Gardener
+  s3-wifi-ble:
+    fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    defines:
+      PIN_SENSOR_ADC: 10
+      PIN_PUMP: 8
+      PIN_VENT_VALVE: 9
+      CONTROL_TASK_CORE: 1
+    platforms:
+      - platform: esp32:esp32 (3.0.3)
+        platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    libraries:
+      - dir: ../../libraries/Gardener
+      - NimBLE-Arduino (2.5.1)
+  s3-wifi:
+    fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    defines:
+      PIN_SENSOR_ADC: 10
+      PIN_PUMP: 8
+      PIN_VENT_VALVE: 9
+      CONTROL_TASK_CORE: 1
     platforms:
       - platform: esp32:esp32 (3.0.3)
         platform_index_url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
