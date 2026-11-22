@@ -202,7 +202,12 @@ python scripts/arduino.py --task build
 python scripts/arduino.py --task upload --port COM5
 python scripts/arduino.py --task data --port COM5
 python scripts/arduino.py --task monitor --port COM5
+python scripts/arduino.py --task info
 ```
+
+`--task info` prints what a build is made of without touching a board: the profile, the board that
+profile's FQBN pins, the flash layout that board's partition scheme cuts, and the options the
+profile records.
 
 `--task upload` writes the page image as well as the sketch, and `--task data` writes the image on
 its own. The image is built with the core's `mklittlefs` and written with its `esptool` at the

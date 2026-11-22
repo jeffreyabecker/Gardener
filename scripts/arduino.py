@@ -6,6 +6,7 @@
 --task data     build the LittleFS image from the sketch's `data` folder and write it
 --task monitor  open the serial monitor at 115200 baud
 --task clean    remove the build output
+--task info     print the profile, board, flash layout and options a build is made of
 
 The page is not in the firmware. Everything under `firmware/gardener/data/www` becomes the board's
 LittleFS partition, and a GET is the matching path inside that tree, so a stylesheet or a second
@@ -54,10 +55,10 @@ IMAGE_STAMP = BUILD_DIR / "littlefs.stamp"
 FLASH_BLOCK = 4096
 FLASH_PAGE = 256
 
-# The sketch profile the wrapper compiles unless one is named, from sketch.yaml: it pins the board,
-# the platform and the tree's own library, so a build is the tree's choice rather than whatever the
-# machine's library manager was left holding. The `ble` profile adds the Bluetooth stack.
-PROFILE = "no-ble"
+# `--profile`'s name, if one was given. Empty compiles the profile sketch.yaml's `default_profile`
+# names, so the script carries no profile of its own: the file is the one place a build's profile is
+# chosen, and `--profile ble` is how a second one is asked for.
+PROFILE = ""
 
 # Where the build's options are written. The header sits in the sketch because that folder is on the
 # include path of every translation unit, and it is generated rather than committed because it is
@@ -132,18 +133,19 @@ def write_knob_defaults():
     run([sys.executable, str(ROOT / "tools" / "knob.py")])
 
 
-def sketch_project(profile):
-    """What sketch.yaml says about the named profile: the board it builds for, and its options.
+@functools.lru_cache(maxsize=None)
+def sketch_yaml():
+    """sketch.yaml as the wrapper reads it: the profile a build compiles, and each profile's board
+    and options.
 
-    The board comes from the profile, since that is the one the compile resolves; a project with no
-    such profile offers its `default_fqbn` instead. arduino-cli's model of this file has no field
-    for a preprocessor symbol and no command prints a profile back, so both are read here: two
-    spaces per level place `profiles:`, the profile's name, then `fqbn:` and its `defines:` beneath.
+    arduino-cli has no field for a preprocessor symbol and no command that prints a profile back,
+    so what the wrapper needs is read from the file: `default_profile` at the top level, then each
+    profile's `fqbn:` and its `defines:`. Two spaces per level place them.
     """
     if not SKETCH_YAML.exists():
         sys.exit(f"{SKETCH_YAML} is missing; it is where the board and the build's options are")
-    default, fqbn, symbols = "", "", []
-    section, current, recorded = "", "", False
+    project = {"default_profile": "", "profiles": {}}
+    section, current, recorded = "", None, False
     for line in SKETCH_YAML.read_text(encoding="utf-8").splitlines():
         line = line.split("#", 1)[0].rstrip()
         if not line.strip():
@@ -152,29 +154,57 @@ def sketch_project(profile):
         key, _, value = line.strip().partition(":")
         value = value.strip().strip("\"'")
         if indent == 0:
-            section, current, recorded = key, "", False
-            if key == "default_fqbn":
-                default = value
+            section, current, recorded = key, None, False
+            if key == "default_profile":
+                project[key] = value
         elif section == "profiles" and indent == 2:
             current, recorded = key, False
-        elif current == profile and indent == 4:
+            project["profiles"][key] = {"fqbn": "", "options": []}
+        elif current and indent == 4:
             recorded = key == "defines"
             if key == "fqbn":
-                fqbn = value
+                project["profiles"][current]["fqbn"] = value
             elif recorded and value:
-                sys.exit(f"{SKETCH_YAML.name}: the {profile} profile's defines are one "
+                sys.exit(f"{SKETCH_YAML.name}: the {current} profile's defines are one "
                          f"NAME: value per line, not {value}")
         elif recorded and indent >= 6:
-            symbols.append(f"{key}={value}" if value else key)
-    if not (fqbn or default):
-        sys.exit(f"{SKETCH_YAML.name} gives no FQBN for the {profile} profile")
-    return fqbn or default, symbols
+            project["profiles"][current]["options"].append(f"{key}={value}" if value else key)
+    return project
+
+
+def default_profile():
+    """The profile sketch.yaml names: the one arduino-cli compiles when none is asked for, and the
+    one the wrapper reads the board and options from."""
+    name = sketch_yaml()["default_profile"]
+    if not name:
+        sys.exit(f"{SKETCH_YAML.name} names no default_profile; pass --profile")
+    return name
+
+
+def profile():
+    """The profile a build compiles: the one `--profile` named, or the file's default."""
+    return PROFILE or default_profile()
+
+
+def sketch_project(profile_name):
+    """The board and the recorded options of the named profile.
+
+    The board is the profile's own, which is what the compile resolves; a profile that names none
+    is an error rather than a fallback, because the file already states the board in every profile.
+    """
+    project = sketch_yaml()
+    spec = project["profiles"].get(profile_name)
+    if spec is None:
+        sys.exit(f"{SKETCH_YAML.name} has no {profile_name} profile")
+    if not spec["fqbn"]:
+        sys.exit(f"{SKETCH_YAML.name} gives the {profile_name} profile no fqbn")
+    return spec["fqbn"], spec["options"]
 
 
 def board():
     """The FQBN the selected profile builds for: the board the compile resolves, so the properties
     the data image is written with cannot describe a different one."""
-    return sketch_project(PROFILE)[0]
+    return sketch_project(profile())[0]
 
 
 def token(name):
@@ -189,7 +219,7 @@ def build_options():
     A token appears once, because the preprocessor warns about a second #define of the same name.
     """
     numbers = {}
-    for symbol in sketch_project(PROFILE)[1] + DEFINES:
+    for symbol in sketch_project(profile())[1] + DEFINES:
         name, _, value = symbol.partition("=")
         numbers[token(name)] = value
     return numbers
@@ -223,13 +253,13 @@ def compile_dir():
     """
     fqbn = board()
     core = Path(build_properties(fqbn)["runtime.platform.path"]).name
-    key = hashlib.sha1("\n".join([PROFILE, fqbn, core]).encode()).hexdigest()[:8]
+    key = hashlib.sha1("\n".join([profile(), fqbn, core]).encode()).hexdigest()[:8]
     return BUILD_DIR / f"compile-{key}"
 
 def compile_sketch(*extra):
     write_knob_defaults()
     write_options()
-    arguments = ["compile", "--profile", PROFILE, "--build-path", str(compile_dir())]
+    arguments = ["compile", "--profile", profile(), "--build-path", str(compile_dir())]
     arguments.extend(extra)
     arguments.append(str(SKETCH))
     # arduino-cli prints nothing while it works, so --verbose is what makes a long build show which
@@ -261,16 +291,28 @@ def tool(directory, *names):
     sys.exit(f"none of {' '.join(names)} is in {directory}")
 
 
-def partition(properties):
-    """The spiffs row of the board's own partition table: the offset the image is written at and the
-    size the tool is given, so neither is a number this script invented."""
+def layout(properties):
+    """The board's own partition table, as the rows the flash is cut into: name, subtype, offset
+    and size, each read from the platform's table for the scheme the profile's FQBN names."""
     table = (Path(properties["runtime.platform.path"]) / "tools" / "partitions"
              / f"{properties['build.partitions']}.csv")
+    rows = []
     for line in table.read_text(encoding="utf-8").splitlines():
         fields = [field.strip() for field in line.split(",")]
-        if len(fields) >= 5 and fields[1] == "data" and fields[2] == "spiffs":
-            return int(fields[3], 0), int(fields[4], 0)
-    sys.exit(f"{table.name} has no spiffs partition to put the page in")
+        if len(fields) >= 5 and fields[1] in ("app", "data"):
+            rows.append((fields[0], fields[2], int(fields[3], 0), int(fields[4], 0)))
+    if not rows:
+        sys.exit(f"{table.name} has no partitions to build a device from")
+    return rows
+
+
+def partition(properties):
+    """The spiffs row: the offset the page image is written at and the size the tool is given, so
+    neither is a number this script invented."""
+    for _, subtype, offset, size in layout(properties):
+        if subtype == "spiffs":
+            return offset, size
+    sys.exit(f"{properties['build.partitions']}.csv has no spiffs partition to put the page in")
 
 
 def image_stamp():
@@ -320,6 +362,22 @@ def write_image():
     IMAGE_STAMP.write_text(stamp + "\n", encoding="utf-8")
 
 
+def info():
+    """Print what a build is made of, as the files describe it: the profile sketch.yaml names, the
+    board that profile's fqbn pins, the flash layout the board's partition scheme cuts, and the
+    options the profile records."""
+    fqbn, options = sketch_project(profile())
+    properties = build_properties(fqbn)
+    offset, size = partition(properties)
+    print(f"profile    {profile()}")
+    print(f"board      {fqbn}")
+    print(f"partitions {properties['build.partitions']}.csv")
+    for name, subtype, start, length in layout(properties):
+        print(f"  {name:<10} {subtype:<9} {hex(start):>10} {length // 1024:>6} KB")
+    print(f"page image {hex(offset)} + {size // 1024} KB")
+    print(f"options    {' '.join(options) if options else '(none: the defaults in the library)'}")
+
+
 def upload():
     device = device_port()
     if not device:
@@ -344,10 +402,11 @@ def main():
     global PROFILE, PORT, VERBOSE, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
-    parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "clean"],
+    parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "clean", "info"],
                         default="build", help="what to do (default: build)")
-    parser.add_argument("--profile", default=PROFILE,
-                        help=f"the sketch profile to compile (default: {PROFILE})")
+    parser.add_argument("--profile", default="",
+                        help="the sketch profile to compile (default: sketch.yaml's "
+                             "default_profile)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--define", action="append", default=[], metavar="NAME=VALUE",
                         help="one of the build's options for this run, overriding the profile's "
@@ -370,6 +429,8 @@ def main():
         write_image()
     elif args.task == "monitor":
         monitor()
+    elif args.task == "info":
+        info()
 
 
 if __name__ == "__main__":
