@@ -27,6 +27,11 @@ The STEP model is not vendored — it is 7.5 MB. Drop `ESP32-C3-MINI-1.STEP` int
 | C688873 | `XH-2P` | `CONN-SMD_XH-2P` |
 | C318884 | `TS-1187A-B-A-B` | `SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5-TL_H1.5` |
 
+Two more symbols come from the same source, for parts whose footprint the standard library already
+has: `TPUSBLC6-4SC6` (C558419) and `AO3400A` (C20917). Their EasyEDA footprints were dropped, because
+SOT-23-6 and SOT-23 are better taken from `Package_TO_SOT_SMD`. The regulator's symbol is KiCad's own
+`Regulator_Linear:AMS1117-3.3`, which extends `AP1117-15` and resolves to the same SOT-223.
+
 The connector's symbol was renamed from the catalogue's `XH-2P卧贴` to `XH-2P`; the footprint names
 are the generator's, which spell out the geometry. The sensor's land pattern is 2.54 mm pitch in a
 7 × 7 mm body, which is why no standard KiCad `SO-6` fits it.
