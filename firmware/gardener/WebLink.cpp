@@ -36,7 +36,7 @@ GARDENER_KNOB_VALID(uint32_t, HttpStackBytes, GARDENER_HTTP_STACK_BYTES, 8192,
 GARDENER_KNOB_VALID(UBaseType_t, WifiTaskPriority, GARDENER_WIFI_TASK_PRIORITY, 1,
                     GARDENER_WIFI_TASK_PRIORITY <= 24, "a task priority below the config ceiling");
 GARDENER_KNOB_VALID(UBaseType_t, WifiTaskCore, GARDENER_WIFI_TASK_CORE, 0,
-                    GARDENER_WIFI_TASK_CORE <= 1, "the part has two cores");
+                    GARDENER_WIFI_TASK_CORE < 1, "the part has one core");
 
 constexpr uint32_t TickMs = 20;
 constexpr const char* WwwRoot = "/www";

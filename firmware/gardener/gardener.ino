@@ -1,7 +1,7 @@
 // Gardener - serial controllable vacuum pump controller.
 //
-// ESP32-S3 + CFSensor XGZP6847A + a vent valve. The machine is the three parts; the ways in are the
-// serial link, the WiFi page and the Bluetooth LE link.
+// ESP32-C3 Super Mini + CFSensor XGZP6847A + a vent valve. The machine is the three parts; the ways
+// in are the serial link, the WiFi page and the Bluetooth LE link.
 //
 // This sketch is the device's composition root: it names the board, builds the parts, the machine
 // and the links over them, and starts the tasks that drive them.

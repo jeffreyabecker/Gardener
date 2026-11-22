@@ -23,7 +23,7 @@ Prefer them to hand-rolled equivalents.
   `indexOf`, `lastIndexOf`, `toInt`, `toFloat`, `toLowerCase`, `startsWith`, `+` — for
   parsing command lines, building replies and formatting values. It is good enough, it is
   what the rest of the ecosystem uses, and a hand-written tokeniser or fixed `char` buffer
-  buys very little on an ESP32-S3 with hundreds of kilobytes of free heap.
+  buys very little on an ESP32-C3 with hundreds of kilobytes of free heap.
 - The same applies to other core facilities: reach for the platform's own helper rather
   than writing a bespoke one.
 - Hand-roll only with a reason you can point at — a hard real-time path, a proven hot loop,
@@ -37,7 +37,7 @@ the only way text is formatted in this firmware.
 
 ## Keep it simple
 
-Simplicity here is not a taste, it is what the firmware is already built to: an Arduino/ESP32-S3
+Simplicity here is not a taste, it is what the firmware is already built to: an Arduino/ESP32-C3
 sketch that hands its parts to a few tasks and lets `loop()` delete itself. It stays that way only if
 new work extends that shape instead of building beside it. When a design is larger than the thing it
 does, the extra is the bug, and every part of it should have a reason a reviewer can point at.

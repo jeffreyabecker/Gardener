@@ -1,4 +1,4 @@
-// The link is the Bluetooth stack's; the s3-wifi profile compiles this file to nothing.
+// The link is the Bluetooth stack's; the c3-wifi profile compiles this file to nothing.
 #if __has_include(<NimBLEDevice.h>)
 
 #include "BleLink.h"

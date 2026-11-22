@@ -1,6 +1,6 @@
 # Gardener
 
-An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
+An ESP32-C3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
 then vents it — driven over a serial line, a web page and a Bluetooth link.
 
 The serial line, the WiFi page and the Bluetooth link are the ways in. A controller sets a depth
@@ -132,7 +132,7 @@ new image: re-flashing the page tree brings the setup access point back.
 ## Bluetooth
 
 A phone or a laptop beside the rig can reach the machine over Bluetooth LE without a network or an
-address, in a build with the `s3-wifi-ble` profile; the default build leaves the stack out. The
+address, in a build with the `c3-wifi-ble` profile; the default build leaves the stack out. The
 device
 advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own address, and serves
 one GATT service over the same control the wire and the page ask. Every characteristic requires an
@@ -219,12 +219,13 @@ should be provisioned with its own setup network name and password needs its `da
 place before this runs — it is not committed, and `wifi.conf.example` beside the sketch is the
 template.
 
-The board options are pinned in
-[firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
-without which `Serial` is UART0 and a USB cable sees nothing. The build compiles the `s3-wifi`
-profile there, which pins the platform and
+The board is the ESP32-C3 Super Mini. Its pins are in
+[firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — the sensor on GPIO0, the pump on
+GPIO1 and the valve on GPIO3 — beside `CDCOnBoot=cdc`, which puts `Serial` on the chip's own USB CDC
+and without which it is UART0 and a USB cable sees nothing. The build compiles the `c3-wifi` profile
+there, which pins the platform and
 [libraries/Gardener](./libraries/Gardener) — the machine, the control law, the serial link and the
-three drivers that fill its parts — by path. `--profile s3-wifi-ble` adds NimBLE-Arduino 2.5.1, the
+three drivers that fill its parts — by path. `--profile c3-wifi-ble` adds NimBLE-Arduino 2.5.1, the
 one library the tree does not hold, and with it the Bluetooth link; the sketch's `build_opt.h` sets
 NimBLE's one-client connection limit in that build. Without the stack the link compiles to a stub,
 because `BleLink.h` asks for the stack's headers rather than a define. The board it runs on sits beside the sketch in
