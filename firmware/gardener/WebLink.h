@@ -55,7 +55,7 @@ class WebLink : public WifiControl {
  private:
   // --- the radio -----------------------------------------------------------
   void startJoin();
-  void startPortal();
+  bool startPortal();
   void stopPortal();
   void save() const;
   void load();

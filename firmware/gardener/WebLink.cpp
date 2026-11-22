@@ -216,8 +216,11 @@ void WebLink::tick(uint32_t nowMs) {
   }
   if (!portalMandatory_ && nowMs - joinStartMs_ >= WifiConnectTimeoutMs) {
     portalMandatory_ = true;
-    startPortal();
-    logger_.warn("wifi: join failed, the portal is up");
+    if (startPortal()) {
+      logger_.warn("wifi: join failed, the portal is up");
+    } else {
+      logger_.warn("wifi: join failed, and the portal did not start");
+    }
   }
   if (nowMs - lastRetryMs_ >= WifiRetryMs) {
     lastRetryMs_ = nowMs;
@@ -302,17 +305,23 @@ void WebLink::forget() {
   logger_.info("wifi: network forgotten");
 }
 
-void WebLink::startPortal() {
-  if (portalUp_) return;
+bool WebLink::startPortal() {
+  if (portalUp_) return true;
 
+  // softAP's result is the only word on whether there is a portal at all: it fails when the radio
+  // will not run one, and the log below would otherwise promise an access point nobody can see.
   WiFi.mode(ssid_.isEmpty() ? WIFI_AP : WIFI_AP_STA);
-  WiFi.softAP(portalSsid_.c_str(), portalPass_.c_str());
+  if (!WiFi.softAP(portalSsid_.c_str(), portalPass_.c_str())) {
+    logger_.warn("wifi: the access point did not start");
+    return false;
+  }
   dns_.start(53, "*", WiFi.softAPIP());
   portalUp_ = true;
 
   String line = "wifi: portal " + portalSsid_ + " at " + WiFi.softAPIP().toString();
   if (!portalPass_.isEmpty()) line += " keyed";
   logger_.info(line.c_str());
+  return true;
 }
 
 void WebLink::stopPortal() {
