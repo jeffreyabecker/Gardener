@@ -7,34 +7,33 @@ async function act(path, params) {
 }
 
 async function readDevice() {
-  const status = new URLSearchParams(await (await fetch('/api/status')).text());
-  $('device').textContent = status.get('device_id') || '-';
+  const status = await (await fetch('/api/status')).json();
+  $('device').textContent = status.device_id || '-';
 }
 
 async function networkState() {
-  const wifi = new URLSearchParams(await (await fetch('/api/wifi')).text());
-  $('mode').textContent = wifi.get('mode') || '-';
-  $('network').textContent = wifi.get('ssid') || '-';
-  $('address').textContent = wifi.get('ip') || '-';
-  $('keep').checked = wifi.get('keep_ap') === '1';
+  const wifi = await (await fetch('/api/wifi')).json();
+  $('mode').textContent = wifi.mode || '-';
+  $('network').textContent = wifi.ssid || '-';
+  $('address').textContent = wifi.ip || '-';
+  $('keep').checked = wifi.keep_ap === true;
   if ($('mode').textContent === 'ap' || $('mode').textContent === 'ap+sta') {
     $('message').textContent = 'joined the setup network';
   }
 }
 
 async function scan() {
-  const found = new URLSearchParams(await (await fetch('/api/wifi/scan')).text());
+  const found = await (await fetch('/api/wifi/scan')).json();
   const list = $('networks');
   list.innerHTML = '';
-  const count = Number(found.get('count') || 0);
-  for (let i = 0; i < count; i++) {
-    const name = found.get('ssid' + i) || '';
+  const networks = found.networks || [];
+  for (const network of networks) {
     const item = document.createElement('li');
-    item.textContent = name + '  ' + found.get('rssi' + i) + ' dBm';
-    item.onclick = () => { $('ssid').value = name; };
+    item.textContent = network.ssid + '  ' + network.rssi + ' dBm';
+    item.onclick = () => { $('ssid').value = network.ssid; };
     list.appendChild(item);
   }
-  if (count === 0) $('message').textContent = 'no networks found';
+  if (networks.length === 0) $('message').textContent = 'no networks found';
 }
 
 async function saveNetwork() {
@@ -46,7 +45,7 @@ async function saveNetwork() {
   show(await send('/api/wifi', {
     ssid,
     pass: $('pass').value,
-    keep_ap: $('keep').checked ? '1' : '0'
+    keep_ap: $('keep').checked
   }));
   setTimeout(networkState, 2000);
 }

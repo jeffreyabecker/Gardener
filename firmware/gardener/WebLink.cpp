@@ -1,9 +1,9 @@
 #include "WebLink.h"
 
-#include <cJSON.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
 #include <WiFi.h>
+#include <cJSON.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <lwip/sockets.h>
@@ -63,6 +63,43 @@ void wifiTask(void* arg) {
     vTaskDelay(pdMS_TO_TICKS(TickMs));
   }
 }
+
+// A document that frees itself however its handler returns.
+class Json {
+ public:
+  explicit Json(cJSON* root) : root_(root) {}
+  ~Json() { cJSON_Delete(root_); }
+  Json(const Json&) = delete;
+  Json& operator=(const Json&) = delete;
+
+  cJSON* root() const { return root_; }
+  explicit operator bool() const { return root_ != nullptr; }
+
+ private:
+  cJSON* root_;
+};
+
+// The body that carries a document; the document is consumed, so a builder path always frees.
+String textOf(cJSON* root) {
+  String body;
+  char* text = cJSON_PrintUnformatted(root);
+  if (text) {
+    body = text;
+    cJSON_free(text);
+  }
+  cJSON_Delete(root);
+  return body;
+}
+
+// A refusal names its code, and whatever the caller needs to know beside it.
+cJSON* errorOf(const char* code) {
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "error", code);
+  return root;
+}
+
+// A value rounded to the digits the wire carries: the sensor's noise is not the reading.
+double rounded(double value, double scale) { return round(value * scale) / scale; }
 
 }  // namespace
 
@@ -336,18 +373,15 @@ void WebLink::stopPortal() {
 }
 
 void WebLink::save() const {
-  String line = "ssid=";
-  line += formEncoded(ssid_);
-  line += "&pass=";
-  line += formEncoded(pass_);
-  line += "&keep_ap=";
-  line += keepPortal_ ? "1" : "0";
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "ssid", ssid_.c_str());
+  cJSON_AddStringToObject(root, "pass", pass_.c_str());
+  cJSON_AddBoolToObject(root, "keep_ap", keepPortal_);
   // The setup network's own two fields go back exactly as the file gave them, empty when it did not:
   // a save stores a choice, and never turns the board's default name into one.
-  line += "&ap_ssid=";
-  line += formEncoded(setupName_);
-  line += "&ap_pass=";
-  line += formEncoded(setupPass_);
+  cJSON_AddStringToObject(root, "ap_ssid", setupName_.c_str());
+  cJSON_AddStringToObject(root, "ap_pass", setupPass_.c_str());
+  const String line = textOf(root);
 
   File file = LittleFS.open(ConfigPath, "w");
   if (!file) {
@@ -364,11 +398,23 @@ void WebLink::load() {
 
   const String line = file.readString();
   file.close();
-  ssid_ = formField(line, "ssid");
-  pass_ = formField(line, "pass");
-  keepPortal_ = formField(line, "keep_ap") == "1";
-  setupName_ = formField(line, "ap_ssid");
-  setupPass_ = formField(line, "ap_pass");
+
+  Json document(cJSON_ParseWithLength(line.c_str(), line.length()));
+  if (!document || !cJSON_IsObject(document.root())) {
+    logger_.warn("wifi: the stored network is not readable, the setup network comes up");
+    return;
+  }
+
+  const cJSON* ssid = cJSON_GetObjectItemCaseSensitive(document.root(), "ssid");
+  const cJSON* pass = cJSON_GetObjectItemCaseSensitive(document.root(), "pass");
+  const cJSON* keepPortal = cJSON_GetObjectItemCaseSensitive(document.root(), "keep_ap");
+  const cJSON* setupName = cJSON_GetObjectItemCaseSensitive(document.root(), "ap_ssid");
+  const cJSON* setupPass = cJSON_GetObjectItemCaseSensitive(document.root(), "ap_pass");
+  ssid_ = cJSON_IsString(ssid) ? String(ssid->valuestring) : String();
+  pass_ = cJSON_IsString(pass) ? String(pass->valuestring) : String();
+  keepPortal_ = cJSON_IsTrue(keepPortal);
+  setupName_ = cJSON_IsString(setupName) ? String(setupName->valuestring) : String();
+  setupPass_ = cJSON_IsString(setupPass) ? String(setupPass->valuestring) : String();
 }
 
 String WebLink::address() const {
@@ -436,7 +482,7 @@ esp_err_t WebLink::onStatic(httpd_req_t* request) {
   return reply(request, "200 OK", typeOf(path), body);
 }
 
-// A path nothing serves. An API path is answered in the API's own form, because its caller parses
+// A path nothing serves. An API path is answered in the API's own shape, because its caller parses
 // that and has no page to land on. A page path is the browser's: on the setup access point it is
 // the portal's landing — the OS probes ask for URLs of their own, and a redirect to the page is
 // what opens the sheet — and otherwise the page tree's own 404 page.
@@ -444,7 +490,7 @@ esp_err_t WebLink::miss(httpd_req_t* request) {
   WebLink* self = from(request);
   const String uri = request->uri;
   if (uri == "/api" || uri.startsWith("/api/")) {
-    return reply(request, "404 Not Found", FormType, "error=not_found");
+    return reply(request, "404 Not Found", JsonType, textOf(errorOf("not_found")));
   }
   if (self->portalUp_ && onPortal(request)) {
     httpd_resp_set_status(request, "302 Found");
@@ -455,7 +501,7 @@ esp_err_t WebLink::miss(httpd_req_t* request) {
 }
 
 // The page-side 404: the page tree's own 404.html when the image has one, and a plain line when it
-// does not, so a browser asking for a page never receives the API's form body.
+// does not, so a browser asking for a page never receives the API's JSON body.
 esp_err_t WebLink::notFound(httpd_req_t* request) {
   WebLink* self = from(request);
   if (self->mounted_) {
@@ -483,124 +529,135 @@ esp_err_t WebLink::onStatus(httpd_req_t* request) {
   const WebLink* self = from(request);
   const SystemStatus now = self->control_.status();
 
-  String body = "uptime_ms=";
-  body += String(now.uptimeMs);
-  body += "&pressure_kpa=";
-  body += String(now.pressureKpa, 2u);
-  body += "&target=";
-  body += String(now.targetKpa, 1u);
-  body += "&state=";
-  body += runStateName(now.state);
-  body += "&hold_time_ms=";
-  body += String(now.holdTimeMs);
-  body += "&duty=";
-  body += String(now.dutyPercent, 1u);
-  body += "&fault=";
-  body += (now.fault[0] ? now.fault : "none");
-  body += "&device_id=";
-  body += self->deviceId_;
-  return reply(request, "200 OK", FormType, body);
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddNumberToObject(root, "uptime_ms", (double)now.uptimeMs);
+  cJSON_AddNumberToObject(root, "pressure_kpa", rounded(now.pressureKpa, 100.0));
+  cJSON_AddNumberToObject(root, "target", rounded(now.targetKpa, 10.0));
+  cJSON_AddStringToObject(root, "state", runStateName(now.state));
+  cJSON_AddNumberToObject(root, "hold_time_ms", (double)now.holdTimeMs);
+  cJSON_AddNumberToObject(root, "duty", rounded(now.dutyPercent, 10.0));
+  cJSON_AddStringToObject(root, "fault", now.fault[0] ? now.fault : "none");
+  cJSON_AddStringToObject(root, "device_id", self->deviceId_.c_str());
+  return reply(request, "200 OK", JsonType, textOf(root));
 }
 
 esp_err_t WebLink::onSet(httpd_req_t* request) {
   WebLink* self = from(request);
-  const String token = formField(bodyOf(request), "target");
-  if (token.isEmpty()) {
-    return reply(request, "400 Bad Request", FormType, "error=missing_target");
+  const String body = bodyOf(request);
+  Json document(cJSON_ParseWithLength(body.c_str(), body.length()));
+  if (!document || !cJSON_IsObject(document.root())) {
+    return reply(request, "400 Bad Request", JsonType, textOf(errorOf("bad_request")));
   }
 
-  // `-` stays as the shorthand for the ambient target, which is what 0 means as well.
+  const cJSON* target = cJSON_GetObjectItemCaseSensitive(document.root(), "target");
+  if (!target) {
+    return reply(request, "400 Bad Request", JsonType, textOf(errorOf("missing_target")));
+  }
+
+  // `-` stays as the shorthand for the ambient target, which is what 0 means as well. A target is a
+  // number; a string that is not `-` is neither a target nor a shorthand.
   float targetKpa = 0.0f;
-  if (token != "-") targetKpa = token.toFloat();
+  if (cJSON_IsNumber(target)) {
+    targetKpa = (float)target->valuedouble;
+  } else if (!cJSON_IsString(target) || strcmp(target->valuestring, "-") != 0) {
+    return reply(request, "400 Bad Request", JsonType, textOf(errorOf("bad_target")));
+  }
 
   switch (self->control_.set(targetKpa)) {
     case ServeResult::Ok: {
-      String body = "target=";
-      body += String(targetKpa, 1u);
-      body += "&state=PULL";
-      return reply(request, "200 OK", FormType, body);
+      cJSON* root = cJSON_CreateObject();
+      cJSON_AddNumberToObject(root, "target", rounded(targetKpa, 10.0));
+      cJSON_AddStringToObject(root, "state", "PULL");
+      return reply(request, "200 OK", JsonType, textOf(root));
     }
-    case ServeResult::Released:
-      return reply(request, "200 OK", FormType, "target=0.0&state=VENT");
+    case ServeResult::Released: {
+      cJSON* root = cJSON_CreateObject();
+      cJSON_AddNumberToObject(root, "target", 0);
+      cJSON_AddStringToObject(root, "state", "VENT");
+      return reply(request, "200 OK", JsonType, textOf(root));
+    }
     case ServeResult::BelowRange: {
-      String body = "error=out_of_range&field=target&value=";
-      body += formEncoded(token);
-      body += "&min=0.0";
-      return reply(request, "400 Bad Request", FormType, body);
+      cJSON* root = errorOf("out_of_range");
+      cJSON_AddStringToObject(root, "field", "target");
+      cJSON_AddNumberToObject(root, "value", rounded(targetKpa, 10.0));
+      cJSON_AddNumberToObject(root, "min", 0);
+      return reply(request, "400 Bad Request", JsonType, textOf(root));
     }
     case ServeResult::AboveRange: {
-      String body = "error=out_of_range&field=target&value=";
-      body += formEncoded(token);
-      body += "&max=";
-      body += String(ControlFloorKpa, 1u);
-      return reply(request, "400 Bad Request", FormType, body);
+      cJSON* root = errorOf("out_of_range");
+      cJSON_AddStringToObject(root, "field", "target");
+      cJSON_AddNumberToObject(root, "value", rounded(targetKpa, 10.0));
+      cJSON_AddNumberToObject(root, "max", ControlFloorKpa);
+      return reply(request, "400 Bad Request", JsonType, textOf(root));
     }
     case ServeResult::NotReady: {
-      String body = "error=not_ready&reason=";
-      body += self->control_.refusal();
-      return reply(request, "409 Conflict", FormType, body);
+      cJSON* root = errorOf("not_ready");
+      cJSON_AddStringToObject(root, "reason", self->control_.refusal());
+      return reply(request, "409 Conflict", JsonType, textOf(root));
     }
   }
 
-  return reply(request, "400 Bad Request", FormType, "error=unknown");
+  return reply(request, "400 Bad Request", JsonType, textOf(errorOf("unknown")));
 }
 
 esp_err_t WebLink::onVent(httpd_req_t* request) {
   from(request)->control_.vent();
-  return reply(request, "200 OK", FormType, "state=VENT");
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "state", "VENT");
+  return reply(request, "200 OK", JsonType, textOf(root));
 }
 
 esp_err_t WebLink::onReset(httpd_req_t* request) {
   from(request)->control_.reset();
-  return reply(request, "200 OK", FormType, "state=IDLE");
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "state", "IDLE");
+  return reply(request, "200 OK", JsonType, textOf(root));
 }
 
 esp_err_t WebLink::onWifi(httpd_req_t* request) {
   const WebLink* self = from(request);
 
-  String body = "ssid=";
-  body += formEncoded(self->ssid_);
-  body += "&mode=";
-  body += self->modeName();
-  body += "&ip=";
-  body += self->address();
-  body += "&keep_ap=";
-  body += self->keepPortal_ ? "1" : "0";
-  return reply(request, "200 OK", FormType, body);
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "ssid", self->ssid_.c_str());
+  cJSON_AddStringToObject(root, "mode", self->modeName());
+  const String address = self->address();
+  cJSON_AddStringToObject(root, "ip", address.c_str());
+  cJSON_AddBoolToObject(root, "keep_ap", self->keepPortal_);
+  return reply(request, "200 OK", JsonType, textOf(root));
 }
 
 esp_err_t WebLink::onScan(httpd_req_t* request) {
   WifiNetwork networks[MaxScannedNetworks];
   const int count = from(request)->scan(networks, MaxScannedNetworks);
 
-  String body = "count=";
-  body += String(count);
+  cJSON* root = cJSON_CreateObject();
+  cJSON* list = cJSON_AddArrayToObject(root, "networks");
   for (int i = 0; i < count; i++) {
-    body += "&ssid";
-    body += String(i);
-    body += "=";
-    body += formEncoded(networks[i].ssid);
-    body += "&rssi";
-    body += String(i);
-    body += "=";
-    body += String(networks[i].rssi);
+    cJSON* entry = cJSON_CreateObject();
+    cJSON_AddStringToObject(entry, "ssid", networks[i].ssid.c_str());
+    cJSON_AddNumberToObject(entry, "rssi", networks[i].rssi);
+    cJSON_AddItemToArray(list, entry);
   }
-  return reply(request, "200 OK", FormType, body);
+  return reply(request, "200 OK", JsonType, textOf(root));
 }
 
 esp_err_t WebLink::onWifiSave(httpd_req_t* request) {
   const String body = bodyOf(request);
-  const String ssid = formField(body, "ssid");
-  const String pass = formField(body, "pass");
-  const bool keepPortal = formField(body, "keep_ap") == "1";
-
-  if (ssid.isEmpty()) {
-    return reply(request, "400 Bad Request", FormType, "error=missing_ssid");
+  Json document(cJSON_ParseWithLength(body.c_str(), body.length()));
+  if (!document || !cJSON_IsObject(document.root())) {
+    return reply(request, "400 Bad Request", JsonType, textOf(errorOf("bad_request")));
   }
 
-  from(request)->setSsid(ssid);
-  from(request)->setPass(pass);
-  from(request)->setKeepPortal(keepPortal);
+  const cJSON* ssid = cJSON_GetObjectItemCaseSensitive(document.root(), "ssid");
+  if (!cJSON_IsString(ssid) || ssid->valuestring[0] == '\0') {
+    return reply(request, "400 Bad Request", JsonType, textOf(errorOf("missing_ssid")));
+  }
+  const cJSON* pass = cJSON_GetObjectItemCaseSensitive(document.root(), "pass");
+  const cJSON* keepPortal = cJSON_GetObjectItemCaseSensitive(document.root(), "keep_ap");
+
+  from(request)->setSsid(String(ssid->valuestring));
+  from(request)->setPass(cJSON_IsString(pass) ? String(pass->valuestring) : String());
+  from(request)->setKeepPortal(cJSON_IsTrue(keepPortal));
   from(request)->join();
   return noContent(request);
 }
@@ -626,9 +683,9 @@ bool WebLink::onPortal(httpd_req_t* request) {
 // --- the request body ------------------------------------------------------
 
 String WebLink::bodyOf(httpd_req_t* request) {
-  if (request->content_len == 0 || request->content_len > MaxFormBytes) return String();
+  if (request->content_len == 0 || request->content_len > MaxBodyBytes) return String();
 
-  char buffer[MaxFormBytes + 1];
+  char buffer[MaxBodyBytes + 1];
   size_t total = 0;
   while (total < request->content_len) {
     const int read = httpd_req_recv(request, buffer + total, request->content_len - total);

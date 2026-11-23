@@ -20,21 +20,22 @@ serves a page tree at `/` and the HTTP API under `/api`:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>&device_id=<hex>` |
-| `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
-| `POST /api/vent` | `state=VENT` |
-| `POST /api/reset` | `state=IDLE` |
-| `GET /api/wifi` | `ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
-| `GET /api/wifi/scan` | `count=<n>&ssid0=<name>&rssi0=<dBm>…` |
-| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `204`, no body |
+| `GET /api/status` | `{"uptime_ms":…,"pressure_kpa":20.5,"target":30,"state":"HOLD","hold_time_ms":1000,"duty":100,"fault":"none","device_id":"E072A1234CD0"}` |
+| `POST /api/set` with `{"target":30}` or `{"target":"-"}` | `{"target":30,"state":"PULL"}`, or `{"target":0,"state":"VENT"}` |
+| `POST /api/vent` | `{"state":"VENT"}` |
+| `POST /api/reset` | `{"state":"IDLE"}` |
+| `GET /api/wifi` | `{"ssid":"…","mode":"sta","ip":"192.168.1.51","keep_ap":false}` |
+| `GET /api/wifi/scan` | `{"networks":[{"ssid":"…","rssi":-51},…]}` |
+| `POST /api/wifi` with `{"ssid":"…","pass":"…","keep_ap":false}` | `204`, no body |
 | `POST /api/wifi/forget` | `204`, no body |
 
-Requests and results are both `application/x-www-form-urlencoded`; there is no JSON anywhere. The
-status code is the outcome: 200 for a call the machine took, 204 for one with nothing to return,
-400 for a refused argument, 409 for a set the machine will not take and 404 for a missing page. A
-refusal carries `error=<code>` and a `reason`, `value`, `min` or `max` beside it; a success carries
-only the fields the call answers with. Every status call ends with `device_id`, the board's 48-bit
-station MAC as twelve hex digits, so the Settings page can say which board it is.
+Requests and results are both `application/json`, built and parsed with the cJSON that ships inside
+the ESP32 core. The status code is the outcome: 200 for a call the machine took, 204 for one with
+nothing to return, 400 for a refused argument, 409 for a set the machine will not take and 404 for a
+missing page. A refusal is an object with an `error` member and a `reason`, `value`, `min` or `max`
+beside it; a success is an object of the fields the call answers with. Every status call ends with
+`device_id`, the board's 48-bit station MAC as twelve hex digits, so the Settings page can say which
+board it is.
 
 On first boot there is no stored network, so the board starts an access point and a captive portal;
 joining it opens the page. Scan, pick a network, enter its password and save. The board joins it,
@@ -71,12 +72,14 @@ network — what the radio sees, what it joined, and the choice it stores — an
 of each says which page is which and links to the other. `page.css` and `app.js` are shared;
 `machine.js` and `settings.js` are each page's own. A `GET` that matches nothing is the portal's
 landing while the setup access point is up and the page tree's `404.html` otherwise; a path under
-`/api` that matches nothing answers `404 error=not_found`. A board whose image will not mount has
-no `404.html` to serve, answers a plain 404, and says so in the boot log.
+`/api` that matches nothing answers `404 {"error":"not_found"}`. A board whose image will not mount
+has no `404.html` to serve, answers a plain 404, and says so in the boot log.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
-form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
-new image: re-flashing the page tree brings the setup access point back.
+JSON object the page's own save writes. It is not reachable over HTTP, and it is cleared by a new
+image: re-flashing the page tree brings the setup access point back. A file written by a firmware
+that spoke form encoding is not readable, so the first boot of this firmware comes up as its own
+access point once.
 
 ## Bluetooth
 

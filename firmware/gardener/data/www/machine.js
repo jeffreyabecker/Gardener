@@ -11,18 +11,16 @@ async function act(path, params) {
 }
 
 async function refresh() {
-  const status = new URLSearchParams(await (await fetch('/api/status')).text());
-  machineState = status.get('state') || 'IDLE';
+  const status = await (await fetch('/api/status')).json();
+  machineState = status.state || 'IDLE';
   $('state').textContent = machineState;
-  const hold = status.get('hold_time_ms');
-  $('hold').textContent = hold === null ? '-' : (Number(hold) / 1000).toFixed(1) + ' s';
-  const pressure = status.get('pressure_kpa');
-  $('pressure').textContent = pressure === null ? '-' : pressure + ' kPa';
-  const target = status.get('target');
-  $('target').textContent = target === null ? '-' : target + ' kPa';
-  const duty = status.get('duty');
-  $('duty').textContent = duty === null ? '-' : duty + ' %';
-  $('fault').textContent = status.get('fault') || 'none';
+  $('hold').textContent =
+    status.hold_time_ms == null ? '-' : (status.hold_time_ms / 1000).toFixed(1) + ' s';
+  $('pressure').textContent =
+    status.pressure_kpa == null ? '-' : status.pressure_kpa.toFixed(2) + ' kPa';
+  $('target').textContent = status.target == null ? '-' : status.target.toFixed(1) + ' kPa';
+  $('duty').textContent = status.duty == null ? '-' : status.duty.toFixed(1) + ' %';
+  $('fault').textContent = status.fault || 'none';
 }
 
 // `change` rather than `input`: a number being typed is not a target yet, and a spinner clicked five

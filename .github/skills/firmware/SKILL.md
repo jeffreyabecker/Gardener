@@ -22,7 +22,7 @@ Prefer them to hand-rolled equivalents.
 
 - **String handling**: use Arduino `String` and its methods — `substring`, `trim`,
   `indexOf`, `lastIndexOf`, `toInt`, `toFloat`, `toLowerCase`, `startsWith`, `+` — for
-  parsing the form fields the page posts, building replies and formatting values. It is good
+  building replies and formatting values. It is good
   enough, it is what the rest of the ecosystem uses, and a hand-written tokeniser or fixed
   `char` buffer buys very little on an ESP32 with hundreds of kilobytes of free heap.
 - The same applies to other core facilities: reach for the platform's own helper rather
@@ -105,8 +105,9 @@ the decisions, one status copy, one radio and one stored network choice — and 
 is how any of it is said.
 
 **Each link speaks its own protocol.** HTTP is a method, a status code and a representation, with a
-form body only because the page reads one without a parser. GATT is a fixed packet of offsets and
-byte codes because that is what the air carries. Neither shape is the right one for the other link.
+JSON body because that is what a page parses without a decoder of its own. GATT is a fixed packet of
+offsets and byte codes because that is what the air carries. Neither shape is the right one for the
+other link.
 
 **The links share the outcome, not its spelling.** Each maps the one `ServeResult` and the one
 `SystemStatus` into what its transport expects: HTTP answers a status code, and the packet writes a

@@ -26,7 +26,7 @@
     </div>
     <div class="row">
       <input id="setpoint" type="number" min="0" max="60" step="0.1" value="20" style="width:96px">
-      <button onclick="act('/api/set', {target: setpoint.value})">Set</button>
+      <button onclick="act('/api/set', {target: Number(setpoint.value)})">Set</button>
       <button class="secondary" onclick="act('/api/vent')">Vent</button>
       <button class="secondary" onclick="act('/api/reset')">Reset</button>
     </div>

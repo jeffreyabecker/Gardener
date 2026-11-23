@@ -18,65 +18,72 @@ is. Every other `GET` is a path inside the page tree, `/` and `/dir/` serving th
 `index.html`. A path outside `/api` that matches nothing is the portal's landing while the setup
 access point is up — a client on that access point is redirected to `/` — and otherwise the page
 tree's `404.html` with a 404. A path under `/api` that nothing serves answers
-`404 error=not_found`. With no page image there is no `404.html` to serve, so the reply is a plain
-404 and the boot log says the page did not mount.
+`404 {"error":"not_found"}`. With no page image there is no `404.html` to serve, so the reply is a
+plain 404 and the boot log says the page did not mount.
 
 ## Format
 
-Both the request body and the reply are `application/x-www-form-urlencoded`: `key=value` pairs
-joined by `&`, with non-alphanumerics percent-encoded. There is no JSON anywhere. The status code is
-the outcome, and the body holds only what the call answers with or the error that explains it.
+Both the request body and the reply are `application/json`. The status code is the outcome, and the
+body holds only what the call answers with or the error that explains it: a success is an object of
+the fields the call answers with, a refusal an object with an `error` member and whatever names the
+reason beside it. Numbers are JSON numbers, `keep_ap` is a boolean, and a scan's networks are an
+array of objects. There is no envelope: no `ok` flag, no `count` field.
 
 A call the machine took answers 200; a call with nothing to return answers 204. A refused argument
-answers 400 with `error=out_of_range`, `error=missing_target` or `error=missing_ssid`; a set the
-machine will not take answers 409 with `error=not_ready` and a `reason` of `latch` or `no_reading`.
-The out-of-range reply names the `value` and the `min` or `max` beside the error.
+answers 400 with `error` `out_of_range`, `missing_target`, `bad_target` or `missing_ssid`; a set the
+machine will not take answers 409 with `error` `not_ready` and a `reason` of `latch` or
+`no_reading`. The out-of-range reply names the `value` and the `min` or `max` beside the error. A
+body that is not a JSON object, or is longer than 256 bytes, is `400 {"error":"bad_request"}`. The
+vent, reset and forget calls take no fields and ignore what the body carries.
 
-A body longer than 256 bytes is ignored, which is the same as sending nothing: a set without a
-target is `error=missing_target` and a save without a name is `error=missing_ssid`. The vent, reset
-and forget calls take no fields and ignore what the body carries.
+Values are rounded before they are sent: pressure to two decimals, target and duty to one, so the
+wire carries the reading and not the sensor's noise.
 
 ## Machine calls
 
 | call | reply |
 | --- | --- |
-| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>&device_id=<hex>` |
-| `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
-| `POST /api/vent` | `state=VENT` |
-| `POST /api/reset` | `state=IDLE` — clears a latched fault |
+| `GET /api/status` | `{"uptime_ms":…,"pressure_kpa":20.5,"target":30,"state":"HOLD","hold_time_ms":1000,"duty":100,"fault":"none","device_id":"E072A1234CD0"}` |
+| `POST /api/set` with `{"target":30}` or `{"target":"-"}` | `{"target":30,"state":"PULL"}`, or `{"target":0,"state":"VENT"}` |
+| `POST /api/vent` | `{"state":"VENT"}` |
+| `POST /api/reset` | `{"state":"IDLE"}` — clears a latched fault |
 
 The status fields are one instant's copy of the machine:
 
 | field | meaning |
 | --- | --- |
 | `uptime_ms` | milliseconds since boot when the copy was taken |
-| `pressure_kpa` | depth below ambient, two decimals; `0.00` while there is no valid reading |
-| `target` | the target the machine holds, one decimal; `0.0` is the ambient target |
+| `pressure_kpa` | depth below ambient, rounded to two decimals; `0` while there is no valid reading |
+| `target` | the target the machine holds, rounded to one decimal; `0` is the ambient target |
 | `state` | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT` |
 | `hold_time_ms` | milliseconds since the state entered `HOLD`; `0` while it is not holding, and a new hold starts its own count |
-| `duty` | the pump as commanded: `100.0` while it is driven, `0.0` while it is not |
-| `fault` | the latched code, or `none` |
+| `duty` | the pump as commanded: `100` while it is driven, `0` while it is not |
+| `fault` | the latched code, or `"none"` |
 | `device_id` | the board's 48-bit station MAC as twelve upper-case hex digits; the same on every boot |
 
 `POST /api/set` is a target and a run in one command. The run gets the machine's own ceiling, two
-hours on the fitted build; nothing a client does extends it. Zero and `-` are the ambient target:
+hours on the fitted build; nothing a client does extends it. Zero and `"-"` are the ambient target:
 both release the chamber, which is the same thing `POST /api/vent` does, and neither needs a
-reading. A target is refused, and queues nothing, in these ways:
+reading. A target is a number, or the string `"-"`; a target written as any other string, such as
+`"30"`, is refused as `bad_target` rather than read as a number. A target is refused, and queues
+nothing, in these ways:
 
 | reply | cause |
 | --- | --- |
-| `400 error=out_of_range&field=target&value=<v>&min=0.0` | a target below ambient, including one written as `nan` |
-| `400 error=out_of_range&field=target&value=<v>&max=60.0` | a target deeper than the fitted floor |
-| `409 error=not_ready&reason=latch` | a fault is latched; `POST /api/reset` clears it |
-| `409 error=not_ready&reason=no_reading` | the sensor is absent or its reading is not valid yet |
+| `400 {"error":"missing_target"}` | the body carries no `target` member |
+| `400 {"error":"bad_target"}` | `target` is neither a number nor `"-"` |
+| `400 {"error":"out_of_range","field":"target","value":-5,"min":0}` | a target below ambient |
+| `400 {"error":"out_of_range","field":"target","value":80,"max":60}` | a target deeper than the fitted floor |
+| `409 {"error":"not_ready","reason":"latch"}` | a fault is latched; `POST /api/reset` clears it |
+| `409 {"error":"not_ready","reason":"no_reading"}` | the sensor is absent or its reading is not valid yet |
 
-The floor itself is accepted (`target=60` with a valid reading is `target=60.0&state=PULL`). A
-token with no number in it reads as 0, so it releases too — send `0` or `-` deliberately, and check
-the reply if a script builds the token.
+The floor itself is accepted (`{"target":60}` with a valid reading is `{"target":60,"state":"PULL"}`).
+Send `0` or `"-"` deliberately: a script that builds the target from a string should send the number
+it means, and check the reply if it does not.
 
 A set, a vent and a reset are queued rather than carried out inside the reply, so their `state` is
 where the machine is going, not necessarily where it is. `GET /api/status` is what shows the state
-that followed. The set's reply repeats the target to one decimal, as the status does.
+that followed. The set's reply repeats the target, rounded as the status rounds it.
 
 | state | meaning |
 | --- | --- |
@@ -100,9 +107,9 @@ and releases the chamber, so the machine is left in `VENT` and settles to `IDLE`
 
 | call | reply |
 | --- | --- |
-| `GET /api/wifi` | `ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
-| `GET /api/wifi/scan` | `count=<n>&ssid0=<name>&rssi0=<dBm>&ssid1=<name>&rssi1=<dBm>…` |
-| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `204`, no body |
+| `GET /api/wifi` | `{"ssid":"Bench Net","mode":"sta","ip":"192.168.1.51","keep_ap":false}` |
+| `GET /api/wifi/scan` | `{"networks":[{"ssid":"Bench Net","rssi":-51},{"ssid":"Shop","rssi":-73}]}` |
+| `POST /api/wifi` with `{"ssid":"…","pass":"…","keep_ap":false}` | `204`, no body |
 | `POST /api/wifi/forget` | `204`, no body |
 
 The status fields are the stored choice and the radio as it stands:
@@ -112,29 +119,30 @@ The status fields are the stored choice and the radio as it stands:
 | `ssid` | the network the board is set to join; empty when none is stored |
 | `mode` | `ap` for the setup access point alone, `ap+sta` while it is kept up beside a join, `sta` otherwise |
 | `ip` | the address the page answers on, or `-` when there is none |
-| `keep_ap` | `1` when the setup access point stays up after a successful join |
+| `keep_ap` | `true` when the setup access point stays up after a successful join |
 
-A scan lists at most 16 networks as `count` plus an indexed `ssid<i>` and `rssi<i>` pair for each,
-in the order found. A scan while the radio is still joining can answer `count=0`.
+A scan lists at most 16 networks as a `networks` array, each entry a name and its signal, in the
+order found. A scan while the radio is still joining can answer an empty array.
 
-`POST /api/wifi` stores the three fields and joins at once, answering `204` before the join has
-succeeded; `GET /api/wifi` is where the address that follows is read. The name is required; the
-password may be empty for an open network, and a missing `keep_ap` is 0. Saving with `keep_ap=1`
-leaves the setup access point up beside the join, which is how a board that moved to another network
-can still be reached over its own access point. A join that has not succeeded after 15 seconds
-brings the setup access point up and retries every five seconds until it does.
+`POST /api/wifi` stores the fields and joins at once, answering `204` before the join has succeeded;
+`GET /api/wifi` is where the address that follows is read. The name is required; the password may be
+empty for an open network, and a missing `keep_ap` is `false`. Saving with `"keep_ap":true` leaves
+the setup access point up beside the join, which is how a board that moved to another network can
+still be reached over its own access point. A join that has not succeeded after 15 seconds brings
+the setup access point up and retries every five seconds until it does.
 
 `POST /api/wifi/forget` clears the stored name, password and keep flag, answering `204`, and brings
 the setup access point back; a forgotten board is provisioned again from scratch.
 
 ```
 curl -s http://192.168.1.47/api/status
-curl -s -X POST -d 'target=30' http://192.168.1.47/api/set
+curl -s -X POST -H 'Content-Type: application/json' -d '{"target":30}' http://192.168.1.47/api/set
 curl -s -X POST http://192.168.1.47/api/vent
 curl -s -X POST http://192.168.1.47/api/reset
 curl -s http://192.168.1.47/api/wifi
 curl -s http://192.168.1.47/api/wifi/scan
-curl -s -X POST -d 'ssid=Bench+Net&pass=secret&keep_ap=0' http://192.168.1.47/api/wifi
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"ssid":"Bench Net","pass":"secret","keep_ap":false}' http://192.168.1.47/api/wifi
 curl -s -X POST http://192.168.1.47/api/wifi/forget
 ```
 
@@ -150,26 +158,30 @@ phone or laptop, then either use the page or the API:
 ```
 curl -s http://192.168.4.1/api/wifi                    # the stored choice and the portal's address
 curl -s http://192.168.4.1/api/wifi/scan               # what the radio can see
-curl -s -X POST -d 'ssid=Bench+Net&pass=secret&keep_ap=0' http://192.168.4.1/api/wifi
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"ssid":"Bench Net","pass":"secret","keep_ap":false}' http://192.168.4.1/api/wifi
 curl -s http://192.168.1.47/api/wifi                   # the new address, after the join
 ```
 
 The default access point address is 192.168.4.1; the log prints the name and address the board
 actually came up with. The access point's own name and key are not part of this API: they come from
 `ap_ssid` and `ap_pass` in the image's `/wifi.conf`, or from the build's defaults when the file does
-not name them. The stored network lives in the same file, outside the page tree, so no URL reaches
-it; provisioning a new image clears it and brings the setup access point back.
+not name them. The stored network lives in the same file, outside the page tree, as one JSON object,
+so no URL reaches it; a file this firmware cannot read leaves the board as its own access point, and
+provisioning a new image clears it.
 
 ## Troubleshooting
 
 | symptom | cause | what to do |
 | --- | --- | --- |
-| `404 error=not_found` | an API path nothing serves | check the call's path |
+| `404 {"error":"not_found"}` | an API path nothing serves | check the call's path |
 | the Not found page appears | the URL is not in the page image | check the file name, or write the data image |
-| `400 error=missing_target` | the set request carried no `target` field, or a body over 256 bytes | send `target=<kPa>` as form data |
-| `400 error=missing_ssid` | the save request carried no `ssid` field | send a network name |
-| `400 error=out_of_range` | the target is below ambient or past the floor | send a value from 0 to the fitted floor |
-| `409 error=not_ready&reason=latch` | a fault is latched | `POST /api/reset`, then set again |
-| `409 error=not_ready&reason=no_reading` | the sensor is absent or has no filtered sample yet | check the sensor's wiring and reference port |
-| a scan answers `count=0` | the radio is busy joining, or nothing is in range | try again once the join settles |
+| `400 {"error":"bad_request"}` | the body is not a JSON object, or is over 256 bytes | send a JSON object with the call's fields |
+| `400 {"error":"missing_target"}` | the set request carried no `target` member | send `{"target":<kPa>}` |
+| `400 {"error":"bad_target"}` | `target` is a string other than `"-"`, or another type | send a number, or `"-"` for ambient |
+| `400 {"error":"missing_ssid"}` | the save request carried no `ssid` string | send `{"ssid":"<network>"}` |
+| `400 {"error":"out_of_range"}` | the target is below ambient or past the floor | send a value from 0 to the fitted floor |
+| `409 {"error":"not_ready","reason":"latch"}` | a fault is latched | `POST /api/reset`, then set again |
+| `409 {"error":"not_ready","reason":"no_reading"}` | the sensor is absent or has no filtered sample yet | check the sensor's wiring and reference port |
+| a scan answers `{"networks":[]}` | the radio is busy joining, or nothing is in range | try again once the join settles |
 | the page will not load | the board is on another network, or mDNS is not resolved | use the address the log prints, or `GET /api/wifi` from a host that can reach it |

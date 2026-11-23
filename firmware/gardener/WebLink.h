@@ -30,8 +30,7 @@ struct WifiNetwork {
 // the same partition, at the filesystem root where no URI can reach it.
 //
 // Every machine call goes through the same SystemControl the Bluetooth link asks; the results are
-// this link's own wording, form-encoded, because a form body is what a browser page reads back
-// without a parser.
+// this link's own wording, JSON, because a page parses one without a decoder of its own.
 //
 // It owns its beat: the join's timeout and retries and the portal's DNS are pumped by tick() on the
 // task begin() starts, because DNSServer has no task of its own. The HTTP handlers run on the
