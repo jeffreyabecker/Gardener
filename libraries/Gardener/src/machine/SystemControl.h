@@ -8,13 +8,13 @@ namespace gardener {
 class CommandQueue;
 class VacuumSystem;
 
-// What a front end can ask the device to do, and the one way to ask it. A peer — the serial link
-// today, anything beside it later — holds one of these instead of the vacuum system and the command
-// queue, so the bounds, the ambient target and the two commands a set is made of live in one place
-// rather than once per link.
+// What a front end can ask the device to do, and the one way to ask it. The web link and the
+// Bluetooth link hold one of these instead of the vacuum system and the command queue, so the
+// bounds, the ambient target and the two commands a set is made of live in one place rather than
+// once per link.
 //
 // The answer names what happened, not how to say it: the reply's words, its fields and its decimals
-// belong to the wire.
+// belong to the link that asks.
 enum class ServeResult : uint8_t {
   Ok,          // a target and a run were queued
   Released,    // the ambient target: a vent was queued instead

@@ -17,7 +17,7 @@ class Pump {
   virtual void off() = 0;
 
   // True while the pump is being driven. It is what the loop reads to know where it left the
-  // actuator, and what the wire reports as the duty.
+  // actuator, and what the status reports as the duty.
   virtual bool active() const = 0;
 };
 

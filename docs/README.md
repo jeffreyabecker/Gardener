@@ -23,11 +23,10 @@ listing them anywhere is forbidden
 
 ## Guides
 
-User-facing build and parts documentation.
+User-facing build, parts and interface documentation.
 
 - [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy, what it costs and
   how it is wired
-- [Serial and WiFi guide](./guides/serial-and-wifi.md) — the serial command line and the HTTP API,
-  with a provisioning walkthrough and an error reference
+- [Web API guide](./guides/web-api.md) — the HTTP API, the page tree, provisioning and its errors
 
-See the [project README](../README.md) for the build and upload flow, the wire and the safety notes.
+See the [project README](../README.md) for the build and upload flow and the safety notes.

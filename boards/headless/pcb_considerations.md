@@ -1,13 +1,25 @@
-# Where the parts have to go on the headless board
+# PCB design considerations for the headless board
 
-The board is 55 × 35 mm, two layers, 1.6 mm, and every part is on the top: one assembly side, one
-stencil, one JLCPCB setup. None of it is placed yet. The 47 footprints in `headless.kicad_pcb` sit
-in a working spread about 188 × 137 mm across, there is no Edge.Cuts outline, and DRC reports the
-malformed outline and 138 unconnected pads, so what follows is what a layout has to satisfy rather
-than a description of one that exists.
+The board is 60 × 40 mm, two layers, 1.6 mm, every part on the top — one assembly side, one stencil,
+one JLCPCB setup — with four M2 holes in the corners. None of it is placed yet. The 47 footprints in
+`headless.kicad_pcb` sit in a working spread about 188 × 137 mm across, there is no Edge.Cuts
+outline, and DRC reports the malformed outline and 138 unconnected pads, so what follows is what a
+layout has to satisfy rather than a description of one that exists.
 
-The order is the order the layout is easiest to do in: the parts that are pinned to an edge, the
-module's antenna, the two switching loops, the analogue pair, then everything that can move last.
+## The frame
+
+- The outline is 60 × 40 mm with 1.5 mm corner radii. JLC's router does 1 mm, so 1.5 is comfortable
+  and keeps the corners clear of the holes.
+- Four M2 mounting holes, 2.2 mm drill, centred 3.5 mm in from each edge. Plain rather than plated:
+  a plastic standoff cannot ground anything, and a plated hole only earns its keep if the screw
+  lands on a metal boss.
+- Keep 1 mm of no copper around each hole and 3 mm of component-free space, so the 3.8 mm screw head
+  and a driver fit. Nothing may sit on a hole — not the module, not a connector, not the antenna
+  strip.
+- That leaves about 53 × 33 mm of usable interior once the four keepouts are taken out, which is
+  enough for the arrangement below.
+- The Edge.Cuts has to exist before DRC means anything: copper-to-edge, courtyard overlap and the
+  unconnected count all need it, and the project already asks 0.5 mm from copper to edge.
 
 ## The edges decide the rest
 
@@ -34,13 +46,39 @@ and J3 on the top edge, U3 between them, and the switches, J4 and the LED at the
 
 The ESP32-C3-MINI-1's footprint is 13.6 × 17.0 mm, and its antenna lives at the local −y end inside
 a keepout 13.2 mm wide and 5.4 mm deep (local y −8.3 to −2.9). The keepout zone in the footprint
-forbids tracks, vias, pads, copper pour and other footprints on every copper layer, which is the
-minimum the datasheet asks: the antenna end must be at the board edge, may overhang it, and must not
-be covered by copper, a part or a metal enclosure wall. Keep your stitching vias out of the strip as
-well — the zone stops the pour, not you.
+forbids tracks, vias, pads, copper pour and other footprints on every copper layer. Keep your own
+stitching vias out of the strip as well — the zone stops the pour, not you.
 
-- Place the module so the −y end hangs 1–2 mm past the Edge.Cuts, and nothing else on the board is
-  within the keepout, including the bottom layer.
+### Overhang, or keep the copper away
+
+Espressif's layout guidance is to place the module's antenna outside the base board with the feed
+point close to the board edge. Where it cannot go outside, it asks for the board to be cut away on
+both sides of the antenna and below it, not merely cleared of copper, and it warns against a module
+in the middle of the board with clearance hollowed on all four sides. It also asks 15 mm of clear
+air inside the housing in every direction.
+
+The difference between the two versions is the FR4 under the antenna. The keepout removes the
+copper, not the dielectric, and the dielectric both detunes the antenna and absorbs some of what it
+radiates. So a keepout alone is the weaker option, and by how much is a decibel or two rather than
+a working link and a dead one.
+
+- Overhanging by 2–3 mm is the version the datasheet wants, and it costs nothing mechanically here:
+  the module has no pads at that end, so the part that hangs over is plastic module PCB. It does
+  grow the finished assembly to about 62–63 × 40, which is the number the box has to take.
+- If 60 × 40 is the box's inside dimension rather than the board's, the module stays flush: its end
+  on the edge, the keepout clear of copper and vias on both layers, and the nearest metal 15 mm
+  away wherever the box allows. For a board this size inside a box, that is the default, and the
+  overhang is the upgrade if the enclosure has the length.
+- The datasheet's fallback — flush, with the board routed away either side of the antenna — buys
+  little at 40 mm: the antenna is 13.2 mm wide, so the slots are 13 mm long each side and the
+  material beside the antenna is already outside the keepout.
+- The enclosure is the real antenna environment. No metal lid, no foil, no pump body or valve coil
+  within 15 mm of that end, and route the two JST leads away from it rather than past it.
+- Fifteen millimetres each side of the antenna does not fit on a 40 mm edge, so the datasheet's
+  clearance cannot be met exactly. Measure the range in the assembled box rather than assuming it.
+
+Whatever is chosen, the rest holds:
+
 - Pads 26/27 are the USB pair and come out of the +x side; the USB socket belongs on the edge that
   side faces, not on the antenna's.
 - Pin 3 is 3.3 V: C2's 10 µF and C9's 100 nF go within 3 mm of it, not at the regulator.
@@ -77,7 +115,9 @@ keep the two nets the same length, not to hit 90 Ω on a 1.6 mm two-layer stack.
 The loads hang on the fused 5 V rail, not on 3.3 V: `/VLOAD` is F1's output and feeds J2 pin 1, J3
 pin 1 and the two flyback cathodes. Q1 and Q2 switch the low side from `/PUMP_CTRL` and
 `/VALVE_CTRL` through 100 Ω, with 10 k holding each gate down. The pump is rated 0.45 A at 3.7 V and
-the valve about 180 mA, so the pair on 5 V is about 1 A with a surge over it.
+the valve about 180 mA, so the pair on 5 V is about 1 A with a surge over it — and F1 is a 1.1 A
+hold part fed from whatever USB port is on the other end, so a weak port may limit before the fuse
+does.
 
 Each loop wants to be small, and the two want their own return:
 
@@ -96,8 +136,9 @@ Each loop wants to be small, and the two want their own return:
 - The mouth of both XH footprints is the −y end, the side the two signal pads run out from. In the
   present placement J2 and J3 have their mouths facing the FETs, so a cable would leave across the
   board; they need a half turn before they meet an edge.
-- Silk the pin 1 end of both connectors. `/VLOAD` on pin 1 and the drain on pin 2 is not something
-  to get wrong twice.
+- Silk the pin 1 end of both connectors. A reversed plug puts the pump across `/VLOAD` and the
+  drain, which the FET's body diode blocks, so nothing burns — the pump just does not run, and that
+  is a five-minute mystery with nothing on the board to explain it.
 
 ## The sensor's front end
 
@@ -118,10 +159,13 @@ antenna, so the sensor and its divider belong at that end.
 
 - U3's AMS1117 is the logic rail only — the pump and the valve are on 5 V — but the module's WiFi
   peaks make it the one part here that needs copper for heat: give the tab (pin 2, also VOUT) a pour
-  of a hundred square millimetres. The rail's bulk is C2's 10 µF at the module's pin 3, so the
-  regulator wants one of the 100 nF at its input and one at its output; the netlist puts one 100 nF
-  on 3.3 V and three on 5 V while the parts table names four jobs, so settle which cap lands where
-  before they are placed.
+  of a hundred square millimetres.
+- The 3.3 V rail's bulk is C2's 10 µF at the module, which is fine for the module but under what the
+  AMS1117 datasheet asks of its output: 22 µF, and it says so for stability, not inrush. Either put
+  a second 10 µF at the output pin or accept a rail that is out of spec and check it with a scope.
+- The netlist has one 100 nF on 3.3 V and three on 5 V, while the parts table names four jobs —
+  module, LDO in, LDO out, sensor. Settle which of them sits at the regulator's output before they
+  are placed.
 - LED1 and R14 are a power indicator on 3.3 V: put them where the board's state can be read with
   the lid on.
 - SW1 and SW2 are a short from the pin to ground and nothing else, so their ground should be the
@@ -129,6 +173,30 @@ antenna, so the sensor and its divider belong at that end.
 - J4 is unpopulated and through-hole, so it can sit anywhere a 2.5 mm pin can be reached; keep it
   out of the USB plug's overmold.
 - 0402 at the module, 0603 and 0805 elsewhere, all on the top.
+
+## Board-level practices
+
+- **Ground.** B.Cu is one solid pour, F.Cu filled where the parts leave room, and the two stitched
+  together. Stitch every few millimetres around the module's perimeter and the USB shell, keep the
+  stitching out of the antenna strip, and make sure each FET's source sits in copper rather than on
+  a single spoke, because the pour is the return for about an amp.
+- **Netclasses.** All Default at 0.2 mm. `/VLOAD` and `+5V` want 0.5 mm, the drains want 0.5 mm,
+  and the USB pair wants its own 0.2 mm / 0.25 mm gap. Set them before routing.
+- **Vias.** 0.6 / 0.3 mm is the default and the smallest the rules allow is 0.5 / 0.3, so there is
+  no need to go below the default anywhere.
+- **Silkscreen.** The project defaults are 1 mm text at 0.1 mm thickness; JLC prints 0.15 mm line
+  width, so raise the thickness before plotting and keep text off pads and mask openings.
+- **Mask and finish.** 0.05 mm mask expansion and lead-free HASL; nothing here has a pitch that
+  wants ENIG.
+- **Assembly.** One side, one stencil. J2 and J3 carry the through-hole attribute in their footprint
+  despite having no holes in their pads; set them to SMD so the position file lists them like every
+  other part on the side.
+- **Panel.** JLC adds rails for assembly, and the three edges that overhang — USB, JSTs and the
+  module if it overhangs — should not be the railed ones, or the panel has to be tabbed around them.
+  Settle it when ordering.
+- **Fiducials and test points.** None. JLC puts fiducials on the panel, and the UART header is the
+  console. At this size and batch that is defensible, and the cost is that a bare board cannot be
+  checked before the module is on it.
 
 ## Three courtyards that understate their parts
 
@@ -144,10 +212,8 @@ so keep that clearance by eye, or widen the courtyards before the layout starts.
   two strap junctions on it, and it is not in the parts table. Nothing headless uses it. Either drop
   it or add it to the parts list and find it 20 mm of edge: it is the largest part after the module,
   and it decides the right-hand end of the board.
-- **Mounting holes** do not exist yet, and the board has to be fixed in a box with two tubes on it.
-  Decide the hole pattern before the zones above are fixed: two or four M2 holes cost pour area and
-  cannot go near the antenna.
-- **Netclasses** are all Default at 0.2 mm. `/VLOAD` and `+5V` want 0.5 mm, the drains want 0.5 mm,
-  and the USB pair wants its own 0.2 mm / 0.25 mm. Set them before routing rather than after.
-- **No test points and no fiducials.** The UART header is the console, so that is defensible; the
-  cost is that a bare board cannot be checked before the module is on it.
+- **The mounting holes** need their hardware decided with them: M2 machine screws into printed
+  bosses, or M2 self-tappers, which want a different drilling. The 2.2 mm above suits a machine
+  screw and a nut.
+- **The 60 mm length is the box's, not just the board's**, because an overhanging module adds two or
+  three millimetres to what has to fit.

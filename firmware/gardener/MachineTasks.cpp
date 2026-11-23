@@ -9,7 +9,6 @@
 #include "core/Logger.h"
 #include "machine/Machine.h"
 #include "machine/VacuumSystem.h"
-#include "serial/SerialLink.h"
 
 namespace gardener::runtime {
 
@@ -42,9 +41,8 @@ GARDENER_KNOB_VALID(UBaseType_t, InterfaceCore, GARDENER_INTERFACE_TASK_CORE, 0,
 struct ControlState {
   MachineTick& tick;
 };
-// The interface task's own state: the links it polls.
+// The interface task's own state: the link it polls.
 struct InterfaceState {
-  SerialLink* link;
   BleLink* bluetooth;
 };
 
@@ -64,7 +62,6 @@ void interfaceTask(void* arg) {
 
   for (;;) {
     const uint32_t nowMs = millis();
-    state.link->poll(nowMs);
     if (state.bluetooth) state.bluetooth->poll(nowMs);
 
     vTaskDelay(pdMS_TO_TICKS(5));
@@ -73,11 +70,10 @@ void interfaceTask(void* arg) {
 
 }  // namespace
 
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
-                       BleLink* bluetooth) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, BleLink* bluetooth) {
   static MachineTick tick{machine.vacuum(), machine.logger(), queue};
   static ControlState control{tick};
-  static InterfaceState interface{link, bluetooth};
+  static InterfaceState interface{bluetooth};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

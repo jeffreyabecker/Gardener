@@ -1,13 +1,13 @@
 # What does a finished headless board look like on JLCPCB?
 
-One 55 × 35 mm two-layer board, fabricated and assembled by JLCPCB, with nothing on it that is a
+One 60 × 40 mm two-layer board, fabricated and assembled by JLCPCB, with nothing on it that is a
 module: the ESP32-C3-MINI-1-N4, a USB-C socket that powers it and programmes it in place, a 5 V to
 3.3 V LDO, two JST-XH for the pump and the valve, two discrete MOSFETs as their switches, and the
 pressure sensor. Headless — no panel and no keys beyond the two that recover a blank chip. Batches
 are 5 to 10 boards.
 
-Where each part has to sit on that board, and what constrains it, is in
-[placement.md](./placement.md).
+Where each part has to sit on that board, what the layout has to satisfy and what to decide before
+it starts are in [pcb_considerations.md](./pcb_considerations.md).
 
 ## Parts
 
@@ -43,7 +43,8 @@ stencil and setup, so a batch lands near **$9–10 a board**.
 
 ## Notes on specific parts
 
-- **ESP32-C3-MINI-1-N4** — the antenna keepout overhangs the board edge.
+- **ESP32-C3-MINI-1-N4** — the antenna keepout is at one end and has to be at a board edge; whether
+  the module overhangs it is decided in the layout notes.
 - **WF100E** — 0.2–4.7 V analogue output, halved by two 10 kΩ into the C3's 2.5 V ADC input; 1 nF
   from output to ground.
 - **TPUSBLC6-4SC6** — 5 V standoff at 0.35 pF; the basic TVS parts clamp at 10.5–11.2 V, too high

@@ -29,8 +29,8 @@ TEST_CASE("a stream hands the link the text typed and holds what it printed") {
   CHECK(io.read() == 'g');
   CHECK(io.peek() == 'e');
   io.clearPrinted();
-  io.print("ok state=IDLE\n");
-  CHECK(io.printed() == std::string("ok state=IDLE\n"));
+  io.print("ok state IDLE\n");
+  CHECK(io.printed() == std::string("ok state IDLE\n"));
 }
 
 TEST_CASE("the clock a case advances is the millis the firmware reads") {

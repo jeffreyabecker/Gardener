@@ -38,7 +38,7 @@ a guide says what to do.
 ## Spec: what is true now
 
 `docs/specs/` is the contract the firmware and its tools satisfy today. Someone implementing or
-testing against it needs nothing else: states, transitions, wire formats, limits and errors are all
+testing against it needs nothing else: states, transitions, formats, limits and errors are all
 in the file.
 
 What goes in: observable behaviour; numbers with their units; the rule, and the reason where the
@@ -46,7 +46,7 @@ reason is a constraint; what a caller must not do where the firmware relies on i
 history, the alternatives an idea weighs, the steps a backlog sets, and a tour of the code — a spec
 is a description, not a proposal and not a design.
 
-One file per area, kebab-case, titled with the thing it is the contract for — `serial-protocol.md`,
+One file per area, kebab-case, titled with the thing it is the contract for — `web-api.md`,
 `vacuum-control.md`; the routine surface has its own folder, `docs/specs/ui/`. It opens with what it
 is the contract for and where its edges are, then says it plainly: tables for states and formats,
 numbered rules where order matters, prose where a reader needs the reason.
@@ -78,9 +78,9 @@ and the ones set aside, what it touches, and what could go wrong.
   before any code exists.
 - **The alternatives, and why not.** The approaches seriously considered, and the constraint that
   ruled each one out.
-- **The entry points it has to hold on.** The wire, the panel, a routine, the loader — a change
+- **The entry points it has to hold on.** The API, the panel, a routine, the loader — a change
   enforced on one path is one the others break.
-- **How it is known to have worked.** The observations that will show it: a wire exchange, a log line,
+- **How it is known to have worked.** The observations that will show it: an exchange, a log line,
   a state read back, a size measured.
 
 What it leaves out is the fine-grained sequence — which step first, which commit, which tick. That

@@ -9,14 +9,14 @@ dropped and the reason is in git.
 ## Second pump/sensor/solenoid combo
 
 Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. The machine,
-the `vacuum` wire commands and the alpha PCB all assume one combo today.
+its status and the alpha PCB all assume one combo today.
 
 ## The board's own free heap
 
 What the device actually has free, and how low a run takes it, is a number only the board can
 answer, and `ESP.getFreeHeap()`, `getMaxAllocHeap()` and `getMinFreeHeap()` are all there to report
-it. Blocked by: the serial protocol has no field for it, and nothing has decided whether one belongs
-there.
+it. Blocked by: the HTTP status and the Bluetooth packet have no field for it, and nothing has
+decided whether one belongs there.
 
 ## Thermal and continuous-duty protection
 
@@ -35,16 +35,15 @@ variant with one is chosen.
 
 ## A local event log
 
-The last N commands, stops, transitions and faults kept in NVS and readable over the serial line, so
-an incident can be understood after the fact. Blocked by: nothing decided about where it lives, how
-it is bounded, or what reads it back.
+The last N commands, stops, transitions and faults kept in NVS and readable over HTTP, so an
+incident can be understood after the fact. Blocked by: nothing decided about where it lives, how it
+is bounded, or what reads it back.
 
 ## Verify the device on hardware
 
-The serial-only device has only ever been compiled. Everything it promises still needs a board: a
-set that pulls to its depth and holds, a vent that reaches the floor, a run that releases when its
-deadline expires, a fault that latches and a reset that clears it, and the valve venting when the
-coil is not held.
+The device has only ever been compiled. Everything it promises still needs a board: a set that pulls
+to its depth and holds, a vent that reaches the floor, a run that releases when its deadline expires,
+a fault that latches and a reset that clears it, and the valve venting when the coil is not held.
 
 ## One file to compile
 

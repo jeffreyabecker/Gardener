@@ -6,7 +6,7 @@
 and the sketch's platform-free headers with the host tools and the cases under doctest and runs
 them, in seconds and with no board, no
 interpreter and no data image. `--list-test-cases` lists what it holds and `--test-case="a name"`
-runs one case while a change is being made. A change to the machine or the wire is checked with it,
+runs one case while a change is being made. A change to the machine or a link is checked with it,
 and that is the check to run.
 
 **The sketch build is not the validation.** `python scripts/arduino.py --task build` cross-compiles

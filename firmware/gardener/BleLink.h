@@ -20,10 +20,10 @@ namespace gardener::runtime {
 
 #if GARDENER_HAS_BLE
 
-// The Bluetooth LE link: one GATT service over the same SystemControl the serial wire and the page
-// ask, so it is another way of asking rather than another way of deciding. The service carries the
-// reading as a status packet, a command write, and the outcome of the last command as a reply; the
-// packets themselves are GattValues.h, which knows nothing of the board.
+// The Bluetooth LE link: one GATT service over the same SystemControl the page asks, so it is
+// another way of asking rather than another way of deciding. The service carries the reading as a
+// status packet, a command write, and the outcome of the last command as a reply; the packets
+// themselves are GattValues.h, which knows nothing of the board.
 //
 // One writer per characteristic: the write callback sets the reply and the beat sets the status, so
 // the two tasks never touch the same value.

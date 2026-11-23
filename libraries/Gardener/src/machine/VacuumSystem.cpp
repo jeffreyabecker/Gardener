@@ -150,7 +150,7 @@ void VacuumSystem::converge() {
 }
 
 void VacuumSystem::setTarget(float pressureKpa) {
-  // The bounds are the machine's, not the wire's: 0 is ambient, and anything deeper than the
+  // The bounds are the machine's, not a link's: 0 is ambient, and anything deeper than the
   // fitted floor is a depth the pump cannot reach. A refused value leaves the target unchanged.
   if (!(pressureKpa >= 0.0f) || pressureKpa > ControlFloorKpa) return;
   if (pressureKpa == targetPressureKpa_) return;

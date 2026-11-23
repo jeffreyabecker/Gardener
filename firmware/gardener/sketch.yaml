@@ -6,8 +6,8 @@
 # routes USB to the chip's USB-Serial-JTAG CDC, which is the peripheral on GPIO19/20 that both the
 # ROM downloader and the sketch share. The C3 has one USB peripheral and no option to choose it
 # with: the USB-Serial-JTAG CDC on GPIO18/19 is the only USB the chip has. CDCOnBoot=cdc is not
-# optional on either: it maps Serial to that CDC, so `(bool)Serial` is a real host-presence signal
-# and esptool uploads keep working over the same cable. Without it Serial is UART0 — on GPIO43/44
+# optional on either: it maps Serial to that CDC, so the boot and run log and esptool uploads share
+# one cable. Without it Serial is UART0 — on GPIO43/44
 # on the S3 and on GPIO21/20 on the C3 — and the interface never reaches the USB-C socket.
 #
 # FlashSize and PartitionScheme pin the layout a build and its image are made for, rather than
@@ -24,7 +24,7 @@ default_profile: c3-wifi
 # knob's token without its `GARDENER_` prefix: the board's pins, the core its control tick takes,
 # then the numbers a different pump or valve changes. arduino-cli has no such field and ignores the
 # block, and its own `profile create` and `profile lib` commands rewrite this file without it, so
-# the block is kept by hand, and a board built with both links records its options in both.
+# the block is kept by hand, and a board's two profiles record the same options.
 #
 # The pins are the board's, and each profile's block is its own board's. On the Super Mini they are
 # three of the four it breaks out with no other duty: GPIO0 is the ADC the sensor's output is read
@@ -32,11 +32,10 @@ default_profile: c3-wifi
 # GPIO8 and GPIO9 for the pump and the valve. The C3 has one core, so its profiles leave every task
 # on core 0; the S3 keeps the control tick alone on core 1, which its profiles record.
 #
-# Four profiles, a board each with the two links: `c3-wifi` and `s3-wifi` are the serial and web
-# device with no library the tree does not hold, and each board's `-ble` profile is the same
-# firmware plus the Bluetooth stack, that library. `c3-wifi` is the default. The link compiles to a
-# stub in a build without the stack because BleLink.h looks for the stack's headers rather than a
-# define.
+# Four profiles, a board each: `c3-wifi` and `s3-wifi` are the web device with no library the tree
+# does not hold, and each board's `-ble` profile is the same firmware plus the Bluetooth stack, that
+# library. `c3-wifi` is the default. The link compiles to a stub in a build without the stack
+# because BleLink.h looks for the stack's headers rather than a define.
 profiles:
   c3-wifi-ble:
     fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default

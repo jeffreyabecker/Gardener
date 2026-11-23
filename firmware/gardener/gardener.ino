@@ -1,7 +1,7 @@
-// Gardener - serial controllable vacuum pump controller.
+// Gardener - WiFi and Bluetooth controllable vacuum pump controller.
 //
 // ESP32-C3 Super Mini + CFSensor XGZP6847A + a vent valve. The machine is the three parts; the ways
-// in are the serial link, the WiFi page and the Bluetooth LE link.
+// in are the WiFi page and the Bluetooth LE link.
 //
 // This sketch is the device's composition root: it names the board, builds the parts, the machine
 // and the links over them, and starts the tasks that drive them.
@@ -24,10 +24,6 @@ constexpr gardener::MachinePins Board{
     .ventValve = GARDENER_PIN_VENT_VALVE,
 };
 
-// True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
-// UART it is always true, so a lost link is never reported.
-bool serialAttached() { return (bool)Serial; }
-
 }  // namespace
 
 void setup() {
@@ -36,8 +32,7 @@ void setup() {
 
   // The device, built in the order it is used: the log and the queue first, because the machine and
   // the control each hold one; then the parts the board wires, the machine over them, the control
-  // that any front end asks, the two radio links over that control, the two plugins the wire
-  // serves, and the serial link over them.
+  // that any front end asks, and the two radio links over that control.
   static gardener::SerialLogger logger(Serial);
   static gardener::runtime::RtosCommandQueue commands;
   static const gardener::runtime::MachineParts parts = gardener::runtime::buildMachineParts(Board);
@@ -45,22 +40,14 @@ void setup() {
   static gardener::SystemControl control(machine.vacuum(), commands);
   static gardener::runtime::WebLink web(control, logger);
   static gardener::runtime::BleLink bluetooth(control, logger);
-  static gardener::SystemCommands system(control);
-  static gardener::runtime::WifiCommands wifi(web);
-  static gardener::SerialLink link(Serial, serialAttached, logger);
-
-  // The wire serves the parts this build has, each under its own prefix.
-  link.add(system);
-  link.add(wifi);
 
   machine.boot();
-  link.begin();
   web.begin();
   // A Bluetooth stack that will not start is a lost feature rather than an unbootable board.
   bluetooth.begin();
 
   // The control tick that services the chamber, and the interface task that answers the links.
-  gardener::runtime::spawnMachineTasks(machine, commands, &link, &bluetooth);
+  gardener::runtime::spawnMachineTasks(machine, commands, &bluetooth);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

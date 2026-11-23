@@ -26,7 +26,7 @@ reach for instead of hand-rolling — is the [firmware skill](../firmware/SKILL.
 | Local variables and parameters | camelCase | `targetPressureKpa`, `nowMs` |
 | Data members | camelCase, trailing underscore | `pump_`, `logger_`, `pidIntegral_` |
 | Constants — `constexpr`, `const`, `static constexpr` | PascalCase | `PanelPriority`, `BackStopMs`, `MarkAsset` |
-| Globals | camelCase | `machineCommandQueue`, `serialConnected` |
+| Globals | camelCase | `machineCommandQueue`, `linkConnected` |
 | Enum values | PascalCase | `Button::Back`, `RunState::Pulling` |
 | Files | PascalCase, one type or one topic per file | `VacuumSystem.h`, `RoutineSettingStore.cpp` |
 | Namespaces | lowercase | `gardener`, `fonts` |

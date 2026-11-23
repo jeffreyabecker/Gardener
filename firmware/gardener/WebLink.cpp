@@ -277,15 +277,6 @@ void WebLink::setKeepPortal(bool keepPortal) {
   save();
 }
 
-WifiStatus WebLink::status() const {
-  WifiStatus now;
-  now.ssid = ssid_;
-  now.address = address();
-  now.mode = modeName();
-  now.keepPortal = keepPortal_;
-  return now;
-}
-
 void WebLink::forget() {
   ssid_ = "";
   pass_ = "";

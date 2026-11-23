@@ -8,7 +8,7 @@ description: 'Design conventions for the Gardener ESP32 firmware. Use when writi
 ## When to use
 
 - Adding or changing anything under `libraries/Gardener/` or `firmware/gardener/`
-- Adding or changing a front end: the serial line, the web API or the Bluetooth packet
+- Adding or changing a front end: the web API or the Bluetooth packet
 - Deciding where a new type, a driver or an interface belongs
 - Reviewing a firmware change
 
@@ -22,19 +22,17 @@ Prefer them to hand-rolled equivalents.
 
 - **String handling**: use Arduino `String` and its methods — `substring`, `trim`,
   `indexOf`, `lastIndexOf`, `toInt`, `toFloat`, `toLowerCase`, `startsWith`, `+` — for
-  parsing command lines, building replies and formatting values. It is good enough, it is
-  what the rest of the ecosystem uses, and a hand-written tokeniser or fixed `char` buffer
-  buys very little on an ESP32 with hundreds of kilobytes of free heap.
+  parsing the form fields the page posts, building replies and formatting values. It is good
+  enough, it is what the rest of the ecosystem uses, and a hand-written tokeniser or fixed
+  `char` buffer buys very little on an ESP32 with hundreds of kilobytes of free heap.
 - The same applies to other core facilities: reach for the platform's own helper rather
   than writing a bespoke one.
 - Hand-roll only with a reason you can point at — a hard real-time path, a proven hot loop,
   a measured memory ceiling — and say what the reason is in a comment.
 
 This applies to new code and to code you are already changing. Existing hand-rolled code is
-not a rewrite-on-sight target: the `char`-buffer command parsing in `serial/SerialLink.cpp` is an
-earlier decision that this guidance supersedes for new work, not a task to schedule. The
-hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
-the only way text is formatted in this firmware.
+not a rewrite-on-sight target, and the hand-rolled text builder that used to sit beside it
+(`core/Text.h`) is gone, so `String` is now the only way text is formatted in this firmware.
 
 ## Keep it simple
 
@@ -69,7 +67,7 @@ else it is a second implementation that does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; the composition builds the parts and the objects it builds expose what they own, and the
-serial domains read the owner when they format a reply. The sketch's `PanelRoot` is that owner for
+links read the owner when they format a reply. The sketch's `PanelRoot` is that owner for
 the device: it holds the machine, the panel's parts and the interpreter, and answers each by
 accessor, so one object still serves both halves of the graph.
 
@@ -101,28 +99,26 @@ driver that can actually know them.
 
 ## Links are independent
 
-The serial line, the web link and the Bluetooth link are three front ends to one machine. They are
-conceptually independent, peers rather than layers: what they share is the machine — one
-`SystemControl` making the decisions, one status copy, one radio and one stored network choice —
-and what they do not share is how any of it is said.
+The web link and the Bluetooth link are two front ends to one machine. They are conceptually
+independent, peers rather than layers: what they share is the machine — one `SystemControl` making
+the decisions, one status copy, one radio and one stored network choice — and what they do not share
+is how any of it is said.
 
-**Each link speaks its own protocol.** A serial line is text lines with an `ok` or `err` first word
-because that is what a terminal and a line parser read. HTTP is a method, a status code and a
-representation, with a form body only because the page reads one without a parser. GATT is a fixed
-packet of offsets and byte codes because that is what the air carries. None of those shapes is the
-right one for another link.
+**Each link speaks its own protocol.** HTTP is a method, a status code and a representation, with a
+form body only because the page reads one without a parser. GATT is a fixed packet of offsets and
+byte codes because that is what the air carries. Neither shape is the right one for the other link.
 
 **The links share the outcome, not its spelling.** Each maps the one `ServeResult` and the one
-`SystemStatus` into what its transport expects: the wire writes `err not_ready latch`, HTTP answers
-a status code, and the packet writes a refusal byte. There is no shared reply builder, no shared
-`ok`/`err` envelope, no shared error table and no common response type across the links. A change
-to one link's format is not a change to the others.
+`SystemStatus` into what its transport expects: HTTP answers a status code, and the packet writes a
+refusal byte. There is no shared reply builder, no shared `ok`/`err` envelope, no shared error table
+and no common response type across the links. A change to one link's format is not a change to the
+other.
 
-**Borrowing the wire's grammar is the smell.** The web link's replies as they stand carry the serial
-line's `ok` word and error codes beside an HTTP status, which says the outcome twice in two dialects
-and makes every HTTP client learn the wire's vocabulary. That is the pattern this rule names: a
-change to the web link is the moment to give the API its own field names and its own error shape,
-and to let the status code be the outcome rather than a second copy of it.
+**Borrowing another link's grammar is the smell.** The web link's replies as they stand carry an
+`ok=1` beside an HTTP status, which says the outcome twice and makes every HTTP client learn an
+envelope it does not need. That is the pattern this rule names: a change to the web link is the
+moment to give the API its own error shape, and to let the status code be the outcome rather than a
+second copy of it.
 
 **A link does not grow a shared abstraction with a link it resembles.** Two reply writers that look
 alike today are cheaper than one common writer that has to be unpicked when a status code, a header

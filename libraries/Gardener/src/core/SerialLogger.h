@@ -7,8 +7,8 @@
 
 namespace gardener {
 
-// The diagnostic sink: two levels, framed as [I] and [W] records on the serial line the link writes
-// its replies to.
+// The diagnostic sink: two levels, framed as [I] and [W] records on the serial line the device logs
+// its boot and run lines to.
 class SerialLogger : public Logger {
  public:
   explicit SerialLogger(Stream& serial) : serial_(serial) {}

@@ -1,67 +1,22 @@
 # Gardener
 
 An ESP32 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
-then vents it — driven over a serial line, a web page and a Bluetooth link.
+then vents it — driven over a web page and a Bluetooth link.
 
-The serial line, the WiFi page and the Bluetooth link are the ways in. A controller sets a depth
-and the machine pulls to it; a vent releases the chamber; a reset clears a fault. What the device
-owns is what has to happen when nobody is watching: holding the target, and venting the chamber
-through one path on stop, abort or fault. Pressures are kPa below ambient, on every wire and in the
-firmware.
+The WiFi page and the Bluetooth link are the ways in. A controller sets a depth and the machine
+pulls to it; a vent releases the chamber; a reset clears a fault. What the device owns is what has
+to happen when nobody is watching: holding the target, and venting the chamber through one path on
+stop, abort or fault. Pressures are kPa below ambient, on every link and in the firmware.
 
 The device is the machine — pump, sensor and vent valve. One sketch,
 [firmware/gardener](./firmware/gardener), composes the libraries for it: what it names is what the
-device has, over the serial, web and Bluetooth links it builds.
-
-## Wire
-
-Every line on the port ends in LF and begins with a prefix: `sys` is the machine's, `wifi` is the
-network's, and a build serves exactly the prefixes it registers.
-
-| command | answer |
-| --- | --- |
-| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> hold_time_ms=<ms> duty=<z> fault=<code\|none>` |
-| `sys set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
-| `sys vent` | `ok state=VENT` |
-| `sys reset` | `ok state=IDLE` — clears a latched fault |
-| `wifi` | `ok ssid=<name> mode=<sta\|ap\|ap+sta> ip=<address> keep_ap=<0\|1>` |
-| `wifi scan` | `ok count=<n>`, then one line per network: `ssid0=<name> rssi0=<dBm>` |
-| `wifi ssid <name>` | `ok ssid=<name>` — the rest of the line is the name, and it is stored |
-| `wifi pass <password>` | `ok` — the rest of the line, stored and never repeated |
-| `wifi keep <on\|off>` | `ok keep_ap=<0\|1>` |
-| `wifi join` | the status line, after the stored network is applied |
-| `wifi forget` | the status line, after the stored network is cleared |
-
-A first word nothing serves is `err unknown_prefix <word>`, and a word under a registered prefix
-that its plugin does not know is `err bad_argument <word>`.
-
-A set is a target and a run in one command, and the run is granted the machine's own ceiling
-(two hours). Zero is the ambient target, which releases the chamber, so `sys set 0` and `sys set -`
-vent. A target is refused with `err out_of_range` past the fitted floor, and with `err not_ready`
-when the machine has no reading or a latched fault. The boot and run lines the firmware logs share
-the same stream, framed as `[I]` and `[W]`, so a controller reads the `ok` and `err` lines.
-
-The network is set a field at a time, and `wifi join` is what applies what is stored; a join with
-nothing stored is `err no_network`. Each field is written to the board's filesystem as it is given,
-so the choice outlives a power cut. A value is written bare while it reads back as one token and
-quoted when it cannot be — `ssid3="Magic Shop"` — with `\"` and `\\` inside, and an argument may be
-quoted on the way in, so `wifi ssid My Net` and `wifi ssid "My Net"` name the same network. A scan
-answers nothing while the radio is joining, and its list is one line per network because the port
-cannot carry a street's worth of names in one write.
-
-Every five seconds, while a controller has the port open, the link also writes a heartbeat
-unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> hold_time_ms=<ms>
-duty=<z> fault=<code|none>`, the `sys get` fields without the `ok` — so a controller can tell a
-quiet machine from a dead one without polling. Its own word keeps it clear of the replies a
-controller is waiting for. Every status line carries `uptime_ms`, the milliseconds since boot at
-the instant the reading was copied, so a controller can place two of them in time, and
-`hold_time_ms`, the milliseconds since the state entered `HOLD` — 0 whenever the machine is not
-holding — so a controller times a hold without knowing the board's clock.
+device has, over the web and Bluetooth links it builds. The USB port carries the boot and run log
+and the upload, not a command interface.
 
 ## Web
 
 The sketch joins a WiFi network, or runs its own setup access point when it has none to join, and
-serves a page tree at `/` and the API the page drives over the same four verbs:
+serves a page tree at `/` and the HTTP API under `/api`:
 
 | call | result |
 | --- | --- |
@@ -74,11 +29,8 @@ serves a page tree at `/` and the API the page drives over the same four verbs:
 | `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `ok=1` |
 | `POST /api/wifi/forget` | `ok=1` |
 
-The same network is set from the wire — `wifi ssid`, `wifi pass`, `wifi keep`, `wifi join` and
-`wifi forget` in the section above — over the one radio and the one stored choice.
-
 Requests and results are both `application/x-www-form-urlencoded`; there is no JSON anywhere. A
-refusal is `ok=0&err=<code>` with the serial wire's codes (`out_of_range`, `not_ready`) and a
+refusal is `ok=0&err=<code>` with the machine's codes (`out_of_range`, `not_ready`) and a
 `reason`, `value`, `min` or `max` beside it. The HTTP status is 200 for a call the machine took,
 400 for a refused argument and 409 for `not_ready`.
 
@@ -87,7 +39,8 @@ joining it opens the page. Scan, pick a network, enter its password and save. Th
 and unless **keep the setup network on** is ticked the access point closes once the join succeeds.
 **Forget** clears the stored network and brings the portal back. The serial log prints the portal
 name, the join attempts and the address the board ends up on. The page and the API are
-unauthenticated on whatever network the board joins, the same trust the serial line carries.
+unauthenticated on whatever network the board joins, so anyone who can reach the board can command
+it.
 
 The setup network is the board, not a network it joins, and its name and key come out of the same
 config file: `ap_ssid` and `ap_pass` in `/wifi.conf`, which the image carries from
@@ -115,8 +68,8 @@ machine's readings and its three buttons, and `/wifi.html` is the network — wh
 what it joined, and the choice it stores — and a nav bar at the top of each says which page is
 which and links to the other. `page.css` and `app.js` are shared; `machine.js` and `wifi.js` are
 each page's own. A `GET` that matches nothing is the portal's landing while the setup access point
-is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page` — the serial link still
-works, which is how a board without an image is looked at.
+is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page`; the boot log says the
+page did not mount.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
@@ -129,7 +82,7 @@ address, in a build with the `c3-wifi-ble` or `s3-wifi-ble` profile; the default
 stack out. The
 device
 advertises as `Gardener-<suffix>`, the suffix being the low two bytes of its own address, and serves
-one GATT service over the same control the wire and the page ask. Every characteristic requires an
+one GATT service over the same control the page asks. Every characteristic requires an
 encrypted, bonded link.
 
 | what | UUID | properties |
@@ -186,7 +139,7 @@ answers what `sys set` answers — a target of 0 is `released`, and a refusal qu
 
 One client at a time: a second is refused while the first is connected, and the board advertises
 again on disconnect. Pairing is Just Works with the bond remembered, in NVS across a power cut. It
-buys an encrypted wire and a phone that reconnects without asking, and it authenticates nobody — the
+buys an encrypted link and a phone that reconnects without asking, and it authenticates nobody — the
 first client to pair gets the bond, and there is no button on the board to withdraw it.
 
 ## Build
@@ -221,7 +174,7 @@ options sit. The ESP32-C3 Super Mini puts the sensor on GPIO0, the pump on GPIO1
 GPIO3; the ESP32-S3 puts them on GPIO10, GPIO8 and GPIO9. Every profile names `CDCOnBoot=cdc`,
 which puts `Serial` on the chip's own USB CDC and without which it is UART0 and a USB cable sees
 nothing. The build compiles the `c3-wifi` profile there, which pins the platform and
-[libraries/Gardener](./libraries/Gardener) — the machine, the control law, the serial link and the
+[libraries/Gardener](./libraries/Gardener) — the machine, the control law, the web link and the
 three drivers that fill its parts — by path. `--profile s3-wifi` compiles the S3 rig instead, and
 either board's `-ble` profile, `c3-wifi-ble` or `s3-wifi-ble`, adds NimBLE-Arduino 2.5.1, the
 one library the tree does not hold, and with it the Bluetooth link; the sketch's `build_opt.h` sets
@@ -279,8 +232,8 @@ same files, so a save lands in the shape the sweep would give it.
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs
 - [docs/guides/poc-parts.md](./docs/guides/poc-parts.md) — the parts, the wiring and a build
-- [docs/guides/serial-and-wifi.md](./docs/guides/serial-and-wifi.md) — the serial command line, the
-  HTTP API and provisioning
+- [docs/guides/web-api.md](./docs/guides/web-api.md) — the HTTP API, the page tree and network
+  provisioning
 - [docs/archive/specs-and-plans.zip](./docs/archive/specs-and-plans.zip) — every spec and plan as it
   stood before the panel port, kept for reference and read by nothing
 

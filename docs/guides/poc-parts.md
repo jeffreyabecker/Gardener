@@ -5,9 +5,10 @@ the PC's USB port with a small pump; the 12 V build is the same machine on a ben
 deeper pump. Pick one before buying: they share most of the parts, and each build lists what it
 needs.
 
-The firmware drives the pump, the pressure sensor and the vent valve, over one serial line. The
-panel, the keys, the buzzer and the battery gauge are listed because the rig has places for them;
-no build reads or paints them as it stands.
+The firmware drives the pump, the pressure sensor and the vent valve, and is asked over its WiFi
+page and its Bluetooth link; the USB port is power, programming and the log. The panel, the keys,
+the buzzer and the battery gauge are listed because the rig has places for them; no build reads or
+paints them as it stands.
 
 **5 V build: ≈ $108. 12 V build: ≈ $170.** The 12 V pump, the 12 V supply and the two
 bucks are estimates; the rest are listed.

@@ -11,8 +11,8 @@ namespace gardener {
 // target, which returns to PULL/HOLD. There is no MANUAL (raw duty is not part of the interface,
 // Q15).
 //
-// It is shared vocabulary rather than the control law's own: the wire prints its names, the overlay
-// draws it and the published state carries it, so it sits below all three.
+// It is shared vocabulary rather than the control law's own: the web API prints its names and the
+// packet carries its value, so it sits below both.
 enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
 inline const char* runStateName(RunState state) {

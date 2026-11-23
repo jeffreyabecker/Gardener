@@ -5,14 +5,18 @@
 #include <esp_http_server.h>
 #include <stdint.h>
 
-#include "WifiControl.h"
-
 namespace gardener {
 class Logger;
 class SystemControl;
 }  // namespace gardener
 
 namespace gardener::runtime {
+
+// One network a scan found, as the page lists it.
+struct WifiNetwork {
+  String ssid;
+  int32_t rssi = 0;
+};
 
 // The device's web link: the page and the API over HTTP, and the radio that carries them. It serves
 // on whichever interface the radio has up, and when there is no network to join it is the setup
@@ -25,17 +29,14 @@ namespace gardener::runtime {
 // or a second page is a file in the folder rather than a rebuild. The network choice is a file in
 // the same partition, at the filesystem root where no URI can reach it.
 //
-// Every machine call goes through the same SystemControl the serial wire asks; the results are
+// Every machine call goes through the same SystemControl the Bluetooth link asks; the results are
 // this link's own wording, form-encoded, because a form body is what a browser page reads back
 // without a parser.
 //
 // It owns its beat: the join's timeout and retries and the portal's DNS are pumped by tick() on the
 // task begin() starts, because DNSServer has no task of its own. The HTTP handlers run on the
 // httpd's, and only ever read the control or post into its queue.
-//
-// The network half of that control is WifiControl, which the wire's wifi plugin holds as well: one
-// radio, reached from the page and from the wire.
-class WebLink : public WifiControl {
+class WebLink {
  public:
   WebLink(SystemControl& control, Logger& logger);
 
@@ -43,17 +44,14 @@ class WebLink : public WifiControl {
   void begin();
   void tick(uint32_t nowMs);
 
-  // --- the network, as a front end asks it ---------------------------------
-  WifiStatus status() const override;
-  int scan(WifiNetwork* networks, int capacity) override;
-  void setSsid(const String& ssid) override;
-  void setPass(const String& pass) override;
-  void setKeepPortal(bool keepPortal) override;
-  void join() override;
-  void forget() override;
-
  private:
   // --- the radio -----------------------------------------------------------
+  int scan(WifiNetwork* networks, int capacity);
+  void setSsid(const String& ssid);
+  void setPass(const String& pass);
+  void setKeepPortal(bool keepPortal);
+  void join();
+  void forget();
   void startJoin();
   bool startPortal();
   void stopPortal();

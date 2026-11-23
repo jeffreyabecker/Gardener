@@ -10,7 +10,7 @@
 namespace gardener {
 
 // The vacuum system: the pressure loop, the release path and the run state, between the devices and
-// the wire. The devices are not its own — it is handed the three it commands, so the pins and the
+// the links. The devices are not its own — it is handed the three it commands, so the pins and the
 // bus stay in the parts and this file stays the control law.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
@@ -43,9 +43,9 @@ class VacuumSystem {
 
   // --- commands -----------------------------------------------------------
   // Every command ends in one decision — given the stored target, the state and the reading, the
-  // valve opens, the valve closes, or the pump runs — so the wire, the panel and the routines all
-  // ask the same question. A target is a setpoint and nothing else: 0 is ambient, which releases
-  // the chamber; a non-zero one written while stopped is stored, not acted on.
+  // valve opens, the valve closes, or the pump runs — so every link and the routines all ask the
+  // same question. A target is a setpoint and nothing else: 0 is ambient, which releases the
+  // chamber; a non-zero one written while stopped is stored, not acted on.
   void setTarget(float pressureKpa);  // kPa below ambient
   // Runs the stored target for at most `holdSeconds` (0 asks for the maximum). Refused only for a
   // latched fault or no valid reading; a start while already running is a no-op.
@@ -58,19 +58,19 @@ class VacuumSystem {
 
   // --- the reads ----------------------------------------------------------
   // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
-  // same number `get` reports as `pressure_kpa`. Zero while there is no reading: the part is
+  // same number the status reports as `pressure_kpa`. Zero while there is no reading: the part is
   // not answering, or no sample has been filtered yet.
   float currentPressureKpa() const;
   RunState runState() const { return state_; }
   float targetPressureKpa() const { return targetPressureKpa_; }
   const char* faultCode() const { return faultCode_; }
-  // The pump's state as the wire reports it: full while it is being driven, zero while it is not.
+  // The pump's state as the status reports it: full while it is being driven, zero while it is not.
   float dutyPercent() const { return pump_->active() ? 100.0f : 0.0f; }
 
   // True while a run is being maintained: pulling, holding, or venting to a shallower target. A
   // release is not a run, so a stopped machine reads false while it vents.
   bool running() const;
-  // The hold granted to the last run in whole seconds, 0 before the first start; the wire reports
+  // The hold granted to the last run in whole seconds, 0 before the first start; the status reports
   // it as 0 whenever nothing is running.
   uint32_t holdSeconds() const { return holdMs_ / 1000; }
   // When the hold under way began, in millis, and 0 while the machine is not holding, so a reader
@@ -79,7 +79,7 @@ class VacuumSystem {
   // True once when the last run ended because its deadline expired; the run log names it.
   bool takeDeadlineExpired();
 
-  // The devices, so the serial layer can read what the loop commands without a second copy.
+  // The devices, so a link can read what the loop commands without a second copy.
   Pump& pump() { return *pump_; }
   VentValve& vent() { return *vent_; }
   PressureSensor& sensor() { return *sensor_; }

@@ -1,5 +1,4 @@
-// The wire's line writer: the order of the parts, the LF that ends the line, a pair's decimals, a
-// bare number's default, and the quoting a value needs to read back as one token.
+// The line writer: the order of the parts, a pair's decimals and a bare number's default.
 
 #include <doctest.h>
 
@@ -14,8 +13,6 @@
 namespace {
 
 using gardener::print;
-using gardener::println;
-using gardener::quote;
 using gardener::host::TextStream;
 
 // A part that goes through Print's Printable overload rather than a String.
@@ -28,52 +25,28 @@ class Stamp : public Printable {
 
 TEST_CASE("print writes every part in order and leaves the line open") {
   TextStream io;
-  print(io, "ok count=", 3);
-  CHECK_EQ(io.printed(), std::string("ok count=3"));
-  println(io, " done");
-  CHECK_EQ(io.printed(), std::string("ok count=3 done\n"));
-}
-
-TEST_CASE("println writes every part in order and ends the line") {
-  TextStream io;
-  println(io, "ok target=", 5, " state=", "PULL");
-  CHECK_EQ(io.printed(), std::string("ok target=5 state=PULL\n"));
-}
-
-TEST_CASE("a line of no parts is just the newline") {
-  TextStream io;
-  println(io);
-  CHECK_EQ(io.printed(), std::string("\n"));
+  print(io, "ok count ", 3);
+  CHECK_EQ(io.printed(), std::string("ok count 3"));
+  print(io, " done");
+  CHECK_EQ(io.printed(), std::string("ok count 3 done"));
 }
 
 TEST_CASE("a pair writes its value to the decimals it names") {
   TextStream io;
-  println(io, std::make_pair(5.0f, 2), ' ', std::make_pair(60.0f, 1), ' ', std::make_pair(5.0f, 0));
-  CHECK_EQ(io.printed(), std::string("5.00 60.0 5\n"));
+  print(io, std::make_pair(5.0f, 2), ' ', std::make_pair(60.0f, 1), ' ', std::make_pair(5.0f, 0));
+  CHECK_EQ(io.printed(), std::string("5.00 60.0 5"));
 }
 
 TEST_CASE("a bare number takes Print's own format") {
   TextStream io;
-  println(io, 5.0f, ' ', 7u, ' ', 2.5);
-  CHECK_EQ(io.printed(), std::string("5.00 7 2.50\n"));
-}
-
-TEST_CASE("quote writes a token bare and quotes what a token cannot hold") {
-  TextStream io;
-  println(io, quote("Home"), ' ', quote("My Net"), ' ', quote("Bob\"s"), ' ', quote(""));
-  CHECK_EQ(io.printed(), std::string("Home \"My Net\" \"Bob\\\"s\" \"\"\n"));
-}
-
-TEST_CASE("quote escapes a backslash inside the quotes") {
-  TextStream io;
-  println(io, quote("a\\b"));
-  CHECK_EQ(io.printed(), std::string("\"a\\\\b\"\n"));
+  print(io, 5.0f, ' ', 7u, ' ', 2.5);
+  CHECK_EQ(io.printed(), std::string("5.00 7 2.50"));
 }
 
 TEST_CASE("a printable part is written through printTo") {
   TextStream io;
-  println(io, "v=", Stamp());
-  CHECK_EQ(io.printed(), std::string("v=stamp\n"));
+  print(io, "v=", Stamp());
+  CHECK_EQ(io.printed(), std::string("v=stamp"));
 }
 
 TEST_CASE("format writes the parts into one string") {
