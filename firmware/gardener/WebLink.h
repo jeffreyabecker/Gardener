@@ -71,6 +71,7 @@ class WebLink {
   static esp_err_t onWifiForget(httpd_req_t* request);
   static esp_err_t onStatic(httpd_req_t* request);
   static esp_err_t miss(httpd_req_t* request);
+  static esp_err_t notFound(httpd_req_t* request);
   static const char* typeOf(const String& path);
 
   static WebLink* from(httpd_req_t* request);

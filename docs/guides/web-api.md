@@ -15,10 +15,11 @@ The host name is the setup access point's name in lower case, with anything outs
 
 The radio serves on the address it joined, or on the setup access point's while that is all there
 is. Every other `GET` is a path inside the page tree, `/` and `/dir/` serving that directory's
-`index.html`. A path that matches nothing is the portal's landing while the setup access point is
-up — a client on that access point is redirected to `/` — and a `404` otherwise. With no page image
-on the board, a missing path answers `404 error=no_page`, and the boot log says the page did not
-mount.
+`index.html`. A path outside `/api` that matches nothing is the portal's landing while the setup
+access point is up — a client on that access point is redirected to `/` — and otherwise the page
+tree's `404.html` with a 404. A path under `/api` that nothing serves answers
+`404 error=not_found`. With no page image there is no `404.html` to serve, so the reply is a plain
+404 and the boot log says the page did not mount.
 
 ## Format
 
@@ -163,7 +164,8 @@ it; provisioning a new image clears it and brings the setup access point back.
 
 | symptom | cause | what to do |
 | --- | --- | --- |
-| `404 error=no_page` | the board has no page image | write the data image, then reboot |
+| `404 error=not_found` | an API path nothing serves | check the call's path |
+| the Not found page appears | the URL is not in the page image | check the file name, or write the data image |
 | `400 error=missing_target` | the set request carried no `target` field, or a body over 256 bytes | send `target=<kPa>` as form data |
 | `400 error=missing_ssid` | the save request carried no `ssid` field | send a network name |
 | `400 error=out_of_range` | the target is below ambient or past the floor | send a value from 0 to the fitted floor |

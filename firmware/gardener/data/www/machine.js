@@ -12,7 +12,6 @@ async function act(path, params) {
 
 async function refresh() {
   const status = new URLSearchParams(await (await fetch('/api/status')).text());
-  $('device').textContent = status.get('device_id') || '-';
   machineState = status.get('state') || 'IDLE';
   $('state').textContent = machineState;
   const hold = status.get('hold_time_ms');

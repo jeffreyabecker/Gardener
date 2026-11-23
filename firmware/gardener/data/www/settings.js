@@ -1,11 +1,17 @@
-// The network's page: where the radio stands, what it can see, and the choice the board stores.
+// The settings page: the board's own ID, and the network — where the radio stands, what it can see,
+// and the choice the board stores.
 
 async function act(path, params) {
   show(await send(path, params));
-  wifiState();
+  networkState();
 }
 
-async function wifiState() {
+async function readDevice() {
+  const status = new URLSearchParams(await (await fetch('/api/status')).text());
+  $('device').textContent = status.get('device_id') || '-';
+}
+
+async function networkState() {
   const wifi = new URLSearchParams(await (await fetch('/api/wifi')).text());
   $('mode').textContent = wifi.get('mode') || '-';
   $('network').textContent = wifi.get('ssid') || '-';
@@ -31,7 +37,7 @@ async function scan() {
   if (count === 0) $('message').textContent = 'no networks found';
 }
 
-async function saveWifi() {
+async function saveNetwork() {
   const ssid = $('ssid').value.trim();
   if (!ssid) {
     $('message').textContent = 'error: enter or pick a network';
@@ -42,8 +48,9 @@ async function saveWifi() {
     pass: $('pass').value,
     keep_ap: $('keep').checked ? '1' : '0'
   }));
-  setTimeout(wifiState, 2000);
+  setTimeout(networkState, 2000);
 }
 
-wifiState();
-setInterval(wifiState, 5000);
+readDevice();
+networkState();
+setInterval(networkState, 5000);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gardener WiFi</title>
+<title>Gardener Settings</title>
 <link rel="stylesheet" href="/page.css">
 </head>
 <body>
@@ -11,12 +11,13 @@
   <h1>Gardener</h1>
   <nav>
     <a href="/">Machine</a>
-    <span aria-current="page">WiFi</span>
+    <span aria-current="page">Settings</span>
   </nav>
 
   <section>
-    <h2>WiFi</h2>
+    <h2>Settings</h2>
     <div class="stat">
+      <div><span>Device ID</span><b id="device">-</b></div>
       <div><span>Mode</span><b id="mode">-</b></div>
       <div><span>Network</span><b id="network">-</b></div>
       <div><span>Address</span><b id="address">-</b></div>
@@ -32,7 +33,7 @@
         keep the setup network on while joined</label>
     </div>
     <div class="row">
-      <button onclick="saveWifi()">Save and join</button>
+      <button onclick="saveNetwork()">Save and join</button>
       <button class="secondary" onclick="act('/api/wifi/forget')">Forget</button>
     </div>
     <p id="message"></p>
@@ -42,6 +43,6 @@
 </main>
 
 <script src="/app.js"></script>
-<script src="/wifi.js"></script>
+<script src="/settings.js"></script>
 </body>
 </html>

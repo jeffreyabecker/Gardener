@@ -3,7 +3,7 @@
 An ESP32 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it,
 then vents it — driven over a web page and a Bluetooth link.
 
-The WiFi page and the Bluetooth link are the ways in. A controller sets a depth and the machine
+The web page and the Bluetooth link are the ways in. A controller sets a depth and the machine
 pulls to it; a vent releases the chamber; a reset clears a fault. What the device owns is what has
 to happen when nobody is watching: holding the target, and venting the chamber through one path on
 stop, abort or fault. Pressures are kPa below ambient, on every link and in the firmware.
@@ -34,7 +34,7 @@ status code is the outcome: 200 for a call the machine took, 204 for one with no
 400 for a refused argument, 409 for a set the machine will not take and 404 for a missing page. A
 refusal carries `error=<code>` and a `reason`, `value`, `min` or `max` beside it; a success carries
 only the fields the call answers with. Every status call ends with `device_id`, the board's 48-bit
-station MAC as twelve hex digits, so a page can say which board it is.
+station MAC as twelve hex digits, so the Settings page can say which board it is.
 
 On first boot there is no stored network, so the board starts an access point and a captive portal;
 joining it opens the page. Scan, pick a network, enter its password and save. The board joins it,
@@ -66,12 +66,13 @@ The page is a file tree on the board, not a string in the firmware: everything u
 `--task data` builds, and a `GET` is the matching path inside it — `/` and `/dir/` serve that
 directory's `index.html`, `/page.css` serves the stylesheet beside it, and a URI with `..` in it is
 refused. A file added to the folder is a URL, and the folder splits the device in two: `/` is the
-machine's readings and its three buttons, and `/wifi.html` is the network — what the radio sees,
-what it joined, and the choice it stores — and a nav bar at the top of each says which page is
-which and links to the other. `page.css` and `app.js` are shared; `machine.js` and `wifi.js` are
-each page's own. A `GET` that matches nothing is the portal's landing while the setup access point
-is up and a 404 otherwise, and a missing tree answers `404 error=no_page`; the boot log says the
-page did not mount.
+machine's readings and its three buttons, and `/settings.html` is the board's own ID and the
+network — what the radio sees, what it joined, and the choice it stores — and a nav bar at the top
+of each says which page is which and links to the other. `page.css` and `app.js` are shared;
+`machine.js` and `settings.js` are each page's own. A `GET` that matches nothing is the portal's
+landing while the setup access point is up and the page tree's `404.html` otherwise; a path under
+`/api` that matches nothing answers `404 error=not_found`. A board whose image will not mount has
+no `404.html` to serve, answers a plain 404, and says so in the boot log.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a

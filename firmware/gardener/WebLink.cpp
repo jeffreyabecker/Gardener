@@ -42,6 +42,7 @@ GARDENER_KNOB_VALID(UBaseType_t, WifiTaskCore, GARDENER_WIFI_TASK_CORE, 0,
 constexpr uint32_t TickMs = 20;
 constexpr const char* WwwRoot = "/www";
 constexpr const char* PagePath = "/www/index.html";
+constexpr const char* NotFoundPath = "/www/404.html";
 constexpr const char* ConfigPath = "/wifi.conf";
 constexpr uint8_t MaxRoutes = 12;
 constexpr uint32_t MaxFormBytes = 256;
@@ -434,18 +435,35 @@ esp_err_t WebLink::onStatic(httpd_req_t* request) {
   return reply(request, "200 OK", typeOf(path), body);
 }
 
-// A path nothing serves. On the setup access point that is the portal's landing — the OS probes ask
-// for URLs of their own, and a redirect to the page is what opens the sheet — but only while there
-// is a page to land on: a redirect with no index behind it would just loop.
+// A path nothing serves. An API path is answered in the API's own form, because its caller parses
+// that and has no page to land on. A page path is the browser's: on the setup access point it is
+// the portal's landing — the OS probes ask for URLs of their own, and a redirect to the page is
+// what opens the sheet — and otherwise the page tree's own 404 page.
 esp_err_t WebLink::miss(httpd_req_t* request) {
   WebLink* self = from(request);
-  if (!self->mounted_ || !LittleFS.exists(PagePath)) {
-    return reply(request, "404 Not Found", FormType, "error=no_page");
+  const String uri = request->uri;
+  if (uri == "/api" || uri.startsWith("/api/")) {
+    return reply(request, "404 Not Found", FormType, "error=not_found");
   }
   if (self->portalUp_ && onPortal(request)) {
     httpd_resp_set_status(request, "302 Found");
     httpd_resp_set_hdr(request, "Location", "/");
     return httpd_resp_send(request, nullptr, 0);
+  }
+  return notFound(request);
+}
+
+// The page-side 404: the page tree's own 404.html when the image has one, and a plain line when it
+// does not, so a browser asking for a page never receives the API's form body.
+esp_err_t WebLink::notFound(httpd_req_t* request) {
+  WebLink* self = from(request);
+  if (self->mounted_) {
+    File file = LittleFS.open(NotFoundPath, "r");
+    if (file) {
+      const String body = file.readString();
+      file.close();
+      return reply(request, "404 Not Found", "text/html", body);
+    }
   }
   return reply(request, "404 Not Found", "text/plain", "not found\n");
 }
