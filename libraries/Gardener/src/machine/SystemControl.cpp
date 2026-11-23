@@ -20,6 +20,10 @@ SystemStatus SystemControl::status() const {
   status.dutyPercent = vacuum_.dutyPercent();
   status.uptimeMs = millis();
   status.holdStartMs = vacuum_.holdStartMs();
+  // The state, not the stamp, says whether there is a hold: a hold that began at boot has a stamp
+  // of zero and is still a hold.
+  status.holdTimeMs =
+      vacuum_.runState() == RunState::Holding ? status.uptimeMs - status.holdStartMs : 0;
   status.fault = vacuum_.faultCode();
   return status;
 }

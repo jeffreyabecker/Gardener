@@ -20,7 +20,7 @@ network's, and a build serves exactly the prefixes it registers.
 
 | command | answer |
 | --- | --- |
-| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> hold_time_ms=<ms> duty=<z> fault=<code\|none>` |
 | `sys set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
 | `sys vent` | `ok state=VENT` |
 | `sys reset` | `ok state=IDLE` — clears a latched fault |
@@ -50,11 +50,13 @@ answers nothing while the radio is joining, and its list is one line per network
 cannot carry a street's worth of names in one write.
 
 Every five seconds, while a controller has the port open, the link also writes a heartbeat
-unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z>
-fault=<code|none>`, the `sys get` fields without the `ok` — so a controller can tell a quiet machine
-from a dead one without polling. Its own word keeps it clear of the replies a controller is waiting
-for. Every status line carries `uptime_ms`, the milliseconds since boot at the instant the reading
-was copied, so a controller can place two of them in time.
+unprompted — `hb uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> hold_time_ms=<ms>
+duty=<z> fault=<code|none>`, the `sys get` fields without the `ok` — so a controller can tell a
+quiet machine from a dead one without polling. Its own word keeps it clear of the replies a
+controller is waiting for. Every status line carries `uptime_ms`, the milliseconds since boot at
+the instant the reading was copied, so a controller can place two of them in time, and
+`hold_time_ms`, the milliseconds since the state entered `HOLD` — 0 whenever the machine is not
+holding — so a controller times a hold without knowing the board's clock.
 
 ## Web
 
@@ -63,7 +65,7 @@ serves a page tree at `/` and the API the page drives over the same four verbs:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
 | `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
 | `POST /api/vent` | `ok=1&state=VENT` |
 | `POST /api/reset` | `ok=1&state=IDLE` |
@@ -139,8 +141,9 @@ encrypted, bonded link.
 
 Everything is little-endian, and floats are IEEE-754 binary32.
 
-**Status** — 18 bytes, readable at any time and notified every five seconds and at once when the
-state or the target moves.
+**Status** — 22 bytes, readable at any time and notified every five seconds and at once when the
+state or the target moves. The hold time is appended, so a client that reads only the first 18
+bytes still finds every field where it was.
 
 | offset | size | field |
 | --- | --- | --- |
@@ -150,6 +153,7 @@ state or the target moves.
 | 12 | 4 | `duty_percent` |
 | 16 | 1 | `state` — 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
 | 17 | 1 | `fault` — the code table below, 0 when nothing is latched |
+| 18 | 4 | `hold_time_ms` — milliseconds since the state entered `HOLD`, 0 while it is not holding |
 
 **Command** — a write with a response: one byte for `vent` and `reset`, five for `set`.
 

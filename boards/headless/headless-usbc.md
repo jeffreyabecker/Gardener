@@ -6,6 +6,9 @@ module: the ESP32-C3-MINI-1-N4, a USB-C socket that powers it and programmes it 
 pressure sensor. Headless — no panel and no keys beyond the two that recover a blank chip. Batches
 are 5 to 10 boards.
 
+Where each part has to sit on that board, and what constrains it, is in
+[placement.md](./placement.md).
+
 ## Parts
 
 JLCPCB loads a basic part for nothing and charges about $3 for each extended part number.

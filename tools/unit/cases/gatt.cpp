@@ -25,8 +25,10 @@ TEST_CASE("a status packet writes every field at its own little-endian offset") 
   status.dutyPercent = 100.0f;
   status.state = RunState::Holding;
   status.fault = "sensor";
+  status.holdTimeMs = 0x0A0B0C0D;
 
   const gatt::Status packet = gatt::encodeStatus(status);
+  CHECK_EQ(gatt::StatusSize, static_cast<size_t>(22));
   const uint8_t expected[gatt::StatusSize] = {
       0x04, 0x03, 0x02, 0x01,  // uptime_ms
       0x00, 0x00, 0x48, 0x41,  // pressure_kpa, 12.5f
@@ -34,6 +36,7 @@ TEST_CASE("a status packet writes every field at its own little-endian offset") 
       0x00, 0x00, 0xC8, 0x42,  // duty_percent, 100.0f
       2,                       // state, Holding
       1,                       // fault, sensor
+      0x0D, 0x0C, 0x0B, 0x0A,  // hold_time_ms
   };
   for (size_t i = 0; i < gatt::StatusSize; i++) {
     CHECK_EQ(static_cast<int>(packet.bytes[i]), static_cast<int>(expected[i]));

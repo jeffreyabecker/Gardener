@@ -44,7 +44,7 @@ which answers with a count line and then one line per network.
 
 | command | reply |
 | --- | --- |
-| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> duty=<z> fault=<code\|none>` |
+| `sys get` | `ok uptime_ms=<ms> pressure_kpa=<x> target=<y> state=<word> hold_time_ms=<ms> duty=<z> fault=<code\|none>` |
 | `sys set <kPa\|->` | `ok target=<kPa> state=PULL`, or `ok target=0.0 state=VENT` for the ambient target |
 | `sys vent` | `ok state=VENT` |
 | `sys reset` | `ok state=IDLE` — clears a latched fault |
@@ -59,6 +59,7 @@ The status fields are one instant's copy of the machine:
 | `pressure_kpa` | depth below ambient, two decimals; `0.00` while there is no valid reading |
 | `target` | the target the machine holds, one decimal; `0.0` is the ambient target |
 | `state` | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT` |
+| `hold_time_ms` | milliseconds since the state entered `HOLD`; `0` while it is not holding, and a new hold starts its own count |
 | `duty` | the pump as commanded: `100.0` while it is driven, `0.0` while it is not |
 | `fault` | the latched code, or `none` |
 
@@ -105,15 +106,17 @@ releases the chamber, so the machine is left in `VENT` and settles to `IDLE`.
 
 ```
 sys get
-ok uptime_ms=4812 pressure_kpa=0.42 target=0.0 state=IDLE duty=0.0 fault=none
+ok uptime_ms=4812 pressure_kpa=0.42 target=0.0 state=IDLE hold_time_ms=0 duty=0.0 fault=none
 sys set 30
 ok target=30.00 state=PULL
 sys get
-ok uptime_ms=9120 pressure_kpa=18.73 target=30.0 state=PULL duty=100.0 fault=none
+ok uptime_ms=9120 pressure_kpa=18.73 target=30.0 state=PULL hold_time_ms=0 duty=100.0 fault=none
+sys get
+ok uptime_ms=24200 pressure_kpa=30.42 target=30.0 state=HOLD hold_time_ms=2350 duty=0.0 fault=none
 sys vent
 ok state=VENT
 sys get
-ok uptime_ms=11240 pressure_kpa=12.10 target=30.0 state=VENT duty=0.0 fault=none
+ok uptime_ms=25140 pressure_kpa=28.10 target=30.0 state=VENT hold_time_ms=0 duty=0.0 fault=none
 ```
 
 ### The heartbeat
@@ -121,7 +124,7 @@ ok uptime_ms=11240 pressure_kpa=12.10 target=30.0 state=VENT duty=0.0 fault=none
 While a host has the port open, the link writes a status line of its own every five seconds:
 
 ```
-hb uptime_ms=15000 pressure_kpa=0.00 target=0.0 state=IDLE duty=0.0 fault=none
+hb uptime_ms=15000 pressure_kpa=0.00 target=0.0 state=IDLE hold_time_ms=0 duty=0.0 fault=none
 ```
 
 It is the `sys get` fields without the `ok`, under a word of its own, so a reader collecting `ok`
@@ -228,7 +231,7 @@ joined by `&`, with non-alphanumerics percent-encoded. There is no JSON anywhere
 
 | call | reply |
 | --- | --- |
-| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
 | `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
 | `POST /api/vent` | `ok=1&state=VENT` |
 | `POST /api/reset` | `ok=1&state=IDLE` |

@@ -465,6 +465,8 @@ esp_err_t WebLink::onStatus(httpd_req_t* request) {
   body += String(now.targetKpa, 1u);
   body += "&state=";
   body += runStateName(now.state);
+  body += "&hold_time_ms=";
+  body += String(now.holdTimeMs);
   body += "&duty=";
   body += String(now.dutyPercent, 1u);
   body += "&fault=";

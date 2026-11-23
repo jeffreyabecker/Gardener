@@ -12,7 +12,7 @@ namespace gardener::gatt {
 // write into a command, an outcome into a reply. Little-endian throughout, floats as IEEE-754
 // binary32, and every field written to its offset rather than by reinterpreting a struct, whose
 // padding is the compiler's.
-constexpr size_t StatusSize = 18;
+constexpr size_t StatusSize = 22;
 constexpr size_t CommandSize = 5;  // a set, op and target; vent and reset are one byte
 constexpr size_t ReplySize = 2;
 
@@ -92,7 +92,8 @@ inline uint8_t refusalCode(const char* refusal) {
   return static_cast<uint8_t>(Refusal::Unknown);
 }
 
-// The status packet: the reading, the target, the pump, the state and the latch, in that order.
+// The status packet: the reading, the target, the pump, the state, the latch and the hold time, in
+// that order. The hold time is appended so every field before it keeps its offset.
 struct Status {
   uint8_t bytes[StatusSize];
 };
@@ -105,6 +106,7 @@ inline Status encodeStatus(const SystemStatus& status) {
   putF32(packet.bytes + 12, status.dutyPercent);
   packet.bytes[16] = static_cast<uint8_t>(status.state);
   packet.bytes[17] = faultCode(status.fault);
+  putU32(packet.bytes + 18, status.holdTimeMs);
   return packet;
 }
 

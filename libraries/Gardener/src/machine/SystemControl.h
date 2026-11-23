@@ -31,6 +31,7 @@ struct SystemStatus {
   float dutyPercent = 0.0f;
   uint32_t uptimeMs = 0;     // milliseconds since boot when the reading was copied
   uint32_t holdStartMs = 0;  // when the hold began, 0 while the system is not holding
+  uint32_t holdTimeMs = 0;   // milliseconds since the hold began, 0 while it is not holding
   const char* fault = "";    // empty when nothing is latched
 };
 

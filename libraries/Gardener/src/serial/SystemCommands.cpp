@@ -91,7 +91,7 @@ void SystemCommands::writeStatus(Print& io, const char* prefix) const {
   println(io, prefix, "uptime_ms=", status.uptimeMs,
           " pressure_kpa=", std::make_pair(status.pressureKpa, 2),
           " target=", std::make_pair(status.targetKpa, 1), " state=", runStateName(status.state),
-          " duty=", std::make_pair(status.dutyPercent, 1),
+          " hold_time_ms=", status.holdTimeMs, " duty=", std::make_pair(status.dutyPercent, 1),
           " fault=", status.fault[0] ? status.fault : "none");
 }
 

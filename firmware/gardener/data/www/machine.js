@@ -14,6 +14,8 @@ async function refresh() {
   const status = new URLSearchParams(await (await fetch('/api/status')).text());
   machineState = status.get('state') || 'IDLE';
   $('state').textContent = machineState;
+  const hold = status.get('hold_time_ms');
+  $('hold').textContent = hold === null ? '-' : (Number(hold) / 1000).toFixed(1) + ' s';
   const pressure = status.get('pressure_kpa');
   $('pressure').textContent = pressure === null ? '-' : pressure + ' kPa';
   const target = status.get('target');

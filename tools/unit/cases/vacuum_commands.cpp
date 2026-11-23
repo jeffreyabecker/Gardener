@@ -98,6 +98,7 @@ TEST_CASE("get answers the pressure to two decimals and the rest to one") {
   CHECK(contains(reply, "ok uptime_ms=0 "));
   CHECK(contains(reply, " pressure_kpa=0.00 "));
   CHECK(contains(reply, " target=0.0 "));
+  CHECK(contains(reply, " hold_time_ms=0 "));
   CHECK(contains(reply, " duty=0.0 "));
 }
 
@@ -215,6 +216,36 @@ TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
   // Zero is the machine's own "give me the ceiling": the wire never names a hold.
   CHECK_EQ(command.value, 0.0f);
   CHECK(bench.queue.empty());
+}
+
+TEST_CASE("hold_time_ms counts from the instant the hold began") {
+  Bench bench;
+  bench.sensor.read(12.0f);
+  bench.machine.vacuum().setTarget(12.0f);
+  bench.machine.vacuum().start();
+  bench.machine.vacuum().service(gardener::host::nowMs());
+
+  bench.send("sys get\n");
+  CHECK(contains(bench.reply(), " state=HOLD hold_time_ms=0 "));
+
+  gardener::host::advance(1200);
+  bench.send("sys get\n");
+  CHECK(contains(bench.reply(), " state=HOLD hold_time_ms=1200 "));
+
+  // A release ends the hold, and the next one starts its own count rather than continuing.
+  bench.machine.vacuum().stop();
+  bench.send("sys get\n");
+  CHECK(contains(bench.reply(), " state=VENT hold_time_ms=0 "));
+
+  gardener::host::advance(300);
+  bench.machine.vacuum().start();
+  bench.machine.vacuum().service(gardener::host::nowMs());
+  bench.send("sys get\n");
+  CHECK(contains(bench.reply(), " state=HOLD hold_time_ms=0 "));
+
+  gardener::host::advance(500);
+  bench.send("sys get\n");
+  CHECK(contains(bench.reply(), " state=HOLD hold_time_ms=500 "));
 }
 
 TEST_CASE("vent answers the release it queues") {
