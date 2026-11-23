@@ -32,6 +32,11 @@ has: `TPUSBLC6-4SC6` (C558419) and `AO3400A` (C20917). Their EasyEDA footprints 
 SOT-23-6 and SOT-23 are better taken from `Package_TO_SOT_SMD`. The regulator's symbol is KiCad's own
 `Regulator_Linear:AMS1117-3.3`, which extends `AP1117-15` and resolves to the same SOT-223.
 
+The generator declares every pin `unspecified`, which makes ERC report every connection those pins
+make. The pins carry their real electrical types instead: `passive` on the switch contacts, the
+connector pins and the MOSFET terminals; `power_in` on the sensor's VDD and GND and on the ESD
+array's VBUS and GND; `output` on the sensor's SO; and `no_connect` on its three NC pins.
+
 The connector's symbol was renamed from the catalogue's `XH-2P卧贴` to `XH-2P`; the footprint names
 are the generator's, which spell out the geometry. The sensor's land pattern is 2.54 mm pitch in a
 7 × 7 mm body, which is why no standard KiCad `SO-6` fits it.

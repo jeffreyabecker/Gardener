@@ -30,7 +30,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "PCM_Espressif:ESP32-C3-MINI-1"
+		(property "Footprint" "Espressif:ESP32-C3-MINI-1"
 			(at 0 -35.56 0)
 			(show_name no)
 			(do_not_autoplace no)

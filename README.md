@@ -108,22 +108,13 @@ The page is a file tree on the board, not a string in the firmware: everything u
 [firmware/gardener/data/www](./firmware/gardener/data/www) becomes the LittleFS image that
 `--task data` builds, and a `GET` is the matching path inside it — `/` and `/dir/` serve that
 directory's `index.html`, `/page.css` serves the stylesheet beside it, and a URI with `..` in it is
-refused. A file added to the folder is a URL, and the folder splits the device in three: `/` is the
-machine's readings and its three buttons, `/interval.html` runs a plan of work and rest periods
-against the same two calls the machine page uses, and `/wifi.html` is the network — what the radio
-sees, what it joined, and the choice it stores — and a nav bar at the top of each says which page is
-which and links to the others. `page.css` and `app.js` are shared; `machine.js`, `interval.js` and
-`wifi.js` are each page's own. A `GET` that matches nothing is the portal's landing while the setup
-access point is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page` — the
-serial link still works, which is how a board without an image is looked at.
-
-Interval pumping is the page's own schedule: it asks for work with `POST /api/set` and rest with
-`POST /api/vent`, counts the intervals itself and stops when its count is done or **Stop** is
-pressed. The target stays live while a plan runs — a value changed while the machine is working is
-posted at once, and one changed during a rest is what the next work period pulls to. There is no
-route and no machine state behind it, so the plan ends when the tab does — a tab closed during a
-work period leaves the pump pulling until the machine's own two-hour ceiling releases it — and each
-work period is a run, so that ceiling applies to it as to any other.
+refused. A file added to the folder is a URL, and the folder splits the device in two: `/` is the
+machine's readings and its three buttons, and `/wifi.html` is the network — what the radio sees,
+what it joined, and the choice it stores — and a nav bar at the top of each says which page is
+which and links to the other. `page.css` and `app.js` are shared; `machine.js` and `wifi.js` are
+each page's own. A `GET` that matches nothing is the portal's landing while the setup access point
+is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page` — the serial link still
+works, which is how a board without an image is looked at.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one
 form-encoded line the page's own save writes. It is not reachable over HTTP, and it is cleared by a
