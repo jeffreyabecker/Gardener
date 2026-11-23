@@ -1,10 +1,10 @@
 # PCB design considerations for the headless board
 
 The board is 60 × 40 mm, two layers, 1.6 mm, every part on the top — one assembly side, one stencil,
-one JLCPCB setup — with four M2 holes in the corners. None of it is placed yet. The 47 footprints in
-`headless.kicad_pcb` sit in a working spread about 188 × 137 mm across, there is no Edge.Cuts
-outline, and DRC reports the malformed outline and 138 unconnected pads, so what follows is what a
-layout has to satisfy rather than a description of one that exists.
+one JLCPCB setup — with four M2 holes in the corners. None of it is placed yet. The 42 footprints in
+`headless.kicad_pcb` sit in a working spread about 188 × 137 mm across, the outline drawn there is a
+71.5 × 43 mm rectangle that no part sits in, and DRC reports 128 unconnected pads, so what follows
+is what a layout has to satisfy rather than a description of one that exists.
 
 ## The frame
 
@@ -18,8 +18,9 @@ layout has to satisfy rather than a description of one that exists.
   strip.
 - That leaves about 53 × 33 mm of usable interior once the four keepouts are taken out, which is
   enough for the arrangement below.
-- The Edge.Cuts has to exist before DRC means anything: copper-to-edge, courtyard overlap and the
-  unconnected count all need it, and the project already asks 0.5 mm from copper to edge.
+- The Edge.Cuts has to be redrawn to that frame before the checks mean anything: copper-to-edge,
+  courtyard overlap and the unconnected count all use it, and the project already asks 0.5 mm from
+  copper to edge.
 
 ## The edges decide the rest
 
@@ -121,14 +122,14 @@ does.
 
 Each loop wants to be small, and the two want their own return:
 
-    +5V ── F1 ── /VLOAD ──┬── C3..C8 ── GND
+    +5V ── F1 ── /VLOAD ──┬── C3 ── GND
                           ├── J2 pin 1 ── [pump] ── J2 pin 2 ── Q1 drain
                           └── D1 cathode ───────────────── Q1 drain (anode)
 
 - D1 and D2 go across their own connector, at the connector, not at the FET. The diode's job is the
   winding's stored current, and the loop it makes should be the smallest on the board.
-- The six 10 µF of C3–C8 are the reservoir for both loads: put them between the two connectors, and
-  put each connector's ground and its FET's source on the same copper.
+- The reservoir is one 100 µF 1210 at C3: put it between the two connectors, and put each
+  connector's ground and its FET's source on the same copper.
 - The drain traces (`/PUMP_DRAIN`, `/VALVE_DRAIN`) carry the full load current and switch hard:
   0.5 mm wide at least, short, and not under the module or beside `/SENSOR_ADC`.
 - R12, R13 and R4, R5 belong at their FET's gate. `/PUMP_CTRL` and `/VALVE_CTRL` are a logic signal
@@ -172,7 +173,7 @@ antenna, so the sensor and its divider belong at that end.
   nearest plane, and their position is about fingers and poking, not electrically about anything.
 - J4 is unpopulated and through-hole, so it can sit anywhere a 2.5 mm pin can be reached; keep it
   out of the USB plug's overmold.
-- 0402 at the module, 0603 and 0805 elsewhere, all on the top.
+- 0402 at the module, 0603 and 0805 elsewhere, 1210 for the reservoir, all on the top.
 
 ## Board-level practices
 
@@ -208,6 +209,9 @@ so keep that clearance by eye, or widen the courtyards before the layout starts.
 
 ## Before the layout starts
 
+- **The outline** in the board file is a 71.5 × 43 mm rectangle, not the 60 × 40 frame above, and no
+  part sits in it. It has to be redrawn with the 1.5 mm corners and the four holes before anything
+  is arranged inside it.
 - **J5** is a 1 × 8 header in the schematic and on the board, with five GPIOs, 5 V, ground and the
   two strap junctions on it, and it is not in the parts table. Nothing headless uses it. Either drop
   it or add it to the parts list and find it 20 mm of edge: it is the largest part after the module,

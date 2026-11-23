@@ -25,7 +25,8 @@ JLCPCB loads a basic part for nothing and charges about $3 for each extended par
 | Schottky diode | 1N5819WS | C191023 | basic | 2 | $0.01 | `Diode_SMD:D_SOD-323` | flyback across each coil |
 | LDO | AMS1117-3.3 | C6186 | basic | 1 | $0.20 | `Package_TO_SOT_SMD:SOT-223-3_TabPin2` | 5 V to 3.3 V |
 | TVS diode | SMBJ6.5CA | C7420377 | basic | 1 | $0.04 | `Diode_SMD:D_SMB` | VBUS clamp at the socket |
-| Capacitor 10 µF 0805 25 V | CL21A106KAYNNNE | C15850 | basic | 8 | $0.03 | `Capacitor_SMD:C_0805_2012Metric` | VBUS, 3V3 at the module, load reservoir |
+| Capacitor 10 µF 0805 25 V | CL21A106KAYNNNE | C15850 | basic | 2 | $0.03 | `Capacitor_SMD:C_0805_2012Metric` | VBUS, 3V3 at the module |
+| Capacitor 100 µF 1210 10 V | CL32A107MPVNNNE | C23742 | extended | 1 | $0.28 | `Capacitor_SMD:C_1210_3225Metric` | load reservoir |
 | Capacitor 100 nF 0402 16 V | CL05B104KO5NNNC | C1525 | basic | 4 | $0.003 | `Capacitor_SMD:C_0402_1005Metric` | module, LDO in, LDO out, sensor |
 | Capacitor 1 µF 0603 50 V | CL10A105KB8NNNC | C15849 | basic | 2 | $0.01 | `Capacitor_SMD:C_0603_1608Metric` | EN's RC, sensor supply |
 | Capacitor 1 nF 0603 50 V | CL10B102KB8NNNC | C1588 | basic | 1 | $0.006 | `Capacitor_SMD:C_0603_1608Metric` | sensor output filter |
@@ -38,8 +39,8 @@ JLCPCB loads a basic part for nothing and charges about $3 for each extended par
 | LED | NCD0805R1 | C84256 | basic | 1 | $0.01 | `LED_SMD:LED_0805_2012Metric` | power |
 | Header, 0.1" 3-pin | — | — | — | 1 | — | `Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical` | UART0 console, unpopulated |
 
-**$5.60 a board in parts**; the six extended numbers add about $18 of loading fees an order, plus the
-stencil and setup, so a batch lands near **$9–10 a board**.
+**$5.70 a board in parts**; the seven extended numbers add about $21 of loading fees an order, plus
+the stencil and setup, so a batch lands near **$9–10 a board**.
 
 ## Notes on specific parts
 

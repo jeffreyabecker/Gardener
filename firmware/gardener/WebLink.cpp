@@ -1,15 +1,16 @@
 #include "WebLink.h"
 
+#include <cJSON.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <lwip/sockets.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "Form.h"
 #include "core/Knob.h"
 #include "core/Logger.h"
 #include "core/RunState.h"
@@ -44,9 +45,9 @@ constexpr const char* WwwRoot = "/www";
 constexpr const char* PagePath = "/www/index.html";
 constexpr const char* NotFoundPath = "/www/404.html";
 constexpr const char* ConfigPath = "/wifi.conf";
+constexpr const char* JsonType = "application/json";
 constexpr uint8_t MaxRoutes = 12;
-constexpr uint32_t MaxFormBytes = 256;
-constexpr const char* FormType = "application/x-www-form-urlencoded";
+constexpr uint32_t MaxBodyBytes = 256;
 constexpr int MaxScannedNetworks = 16;
 
 // What an access point's name and key may be: 32 bytes of SSID, and WPA2's 8 to 63 characters — or
