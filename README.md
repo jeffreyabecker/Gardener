@@ -275,6 +275,8 @@ same files, so a save lands in the shape the sweep would give it.
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs
 - [docs/guides/poc-parts.md](./docs/guides/poc-parts.md) — the parts, the wiring and a build
+- [docs/guides/serial-and-wifi.md](./docs/guides/serial-and-wifi.md) — the serial command line, the
+  HTTP API and provisioning
 - [docs/archive/specs-and-plans.zip](./docs/archive/specs-and-plans.zip) — every spec and plan as it
   stood before the panel port, kept for reference and read by nothing
 
