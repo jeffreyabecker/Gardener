@@ -114,8 +114,10 @@ void WebLink::begin() {
 
   // The board's identity, apart from the name it advertises: the 48-bit station MAC as twelve hex
   // digits, so two boards on one network are told apart by the page as well as by their names.
+  // getEfuseMac holds the first octet in its low byte, so the octets are written in MAC order.
   char identity[13];
-  snprintf(identity, sizeof identity, "%012llX", (unsigned long long)(mac & 0xFFFFFFFFFFFFull));
+  snprintf(identity, sizeof identity, "%02X%02X%02X%02X%02X%02X", (uint8_t)mac, (uint8_t)(mac >> 8),
+           (uint8_t)(mac >> 16), (uint8_t)(mac >> 24), (uint8_t)(mac >> 32), (uint8_t)(mac >> 40));
   deviceId_ = identity;
 
   // The credentials are this link's, not the core's: persistent(false) stops WiFi writing a second
