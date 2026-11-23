@@ -1,6 +1,6 @@
 ---
 name: firmware
-description: 'Design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, the core/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating. Naming and formatting are in the cpp skill.'
+description: 'Design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, the core/ layer rule, one class where one class works, one file per device, links staying independent of one another, no speculative generality, and deleting rather than deprecating. Naming and formatting are in the cpp skill.'
 ---
 
 # Firmware
@@ -8,6 +8,7 @@ description: 'Design conventions for the Gardener ESP32 firmware. Use when writi
 ## When to use
 
 - Adding or changing anything under `libraries/Gardener/` or `firmware/gardener/`
+- Adding or changing a front end: the serial line, the web API or the Bluetooth packet
 - Deciding where a new type, a driver or an interface belongs
 - Reviewing a firmware change
 
@@ -97,6 +98,41 @@ a lock, another queue or a watchdog is a question to ask before it is a thing to
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
 of it: one `pressureKpa()` reading, with the ambient reference and the values derived from it left to the
 driver that can actually know them.
+
+## Links are independent
+
+The serial line, the web link and the Bluetooth link are three front ends to one machine. They are
+conceptually independent, peers rather than layers: what they share is the machine — one
+`SystemControl` making the decisions, one status copy, one radio and one stored network choice —
+and what they do not share is how any of it is said.
+
+**Each link speaks its own protocol.** A serial line is text lines with an `ok` or `err` first word
+because that is what a terminal and a line parser read. HTTP is a method, a status code and a
+representation, with a form body only because the page reads one without a parser. GATT is a fixed
+packet of offsets and byte codes because that is what the air carries. None of those shapes is the
+right one for another link.
+
+**The links share the outcome, not its spelling.** Each maps the one `ServeResult` and the one
+`SystemStatus` into what its transport expects: the wire writes `err not_ready latch`, HTTP answers
+a status code, and the packet writes a refusal byte. There is no shared reply builder, no shared
+`ok`/`err` envelope, no shared error table and no common response type across the links. A change
+to one link's format is not a change to the others.
+
+**Borrowing the wire's grammar is the smell.** The web link's replies as they stand carry the serial
+line's `ok` word and error codes beside an HTTP status, which says the outcome twice in two dialects
+and makes every HTTP client learn the wire's vocabulary. That is the pattern this rule names: a
+change to the web link is the moment to give the API its own field names and its own error shape,
+and to let the status code be the outcome rather than a second copy of it.
+
+**A link does not grow a shared abstraction with a link it resembles.** Two reply writers that look
+alike today are cheaper than one common writer that has to be unpicked when a status code, a header
+or a chunked body arrives and a shared envelope cannot express it. The duplication is the
+independence, and it is expected: no reuse between links is planned here, so none is to be
+engineered.
+
+This is guidance for new code and for code you are already changing. A link that already borrows
+another's grammar is not a rewrite-on-sight target, but the next change to that link is the moment
+to give it its own.
 
 ## The Berry boundary
 
