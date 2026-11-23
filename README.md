@@ -20,7 +20,7 @@ serves a page tree at `/` and the HTTP API under `/api`:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>&device_id=<hex>` |
 | `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
 | `POST /api/vent` | `state=VENT` |
 | `POST /api/reset` | `state=IDLE` |
@@ -33,7 +33,8 @@ Requests and results are both `application/x-www-form-urlencoded`; there is no J
 status code is the outcome: 200 for a call the machine took, 204 for one with nothing to return,
 400 for a refused argument, 409 for a set the machine will not take and 404 for a missing page. A
 refusal carries `error=<code>` and a `reason`, `value`, `min` or `max` beside it; a success carries
-only the fields the call answers with.
+only the fields the call answers with. Every status call ends with `device_id`, the board's 48-bit
+station MAC as twelve hex digits, so a page can say which board it is.
 
 On first boot there is no stored network, so the board starts an access point and a captive portal;
 joining it opens the page. Scan, pick a network, enter its password and save. The board joins it,

@@ -104,6 +104,8 @@ class WebLink {
   String setupPass_;
   String portalSsid_;
   String portalPass_;
+  // The board's own identity, apart from the name it advertises.
+  String deviceId_;
   DNSServer dns_;
   bool mounted_ = false;
 

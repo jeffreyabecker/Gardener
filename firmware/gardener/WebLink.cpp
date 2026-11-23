@@ -7,6 +7,7 @@
 #include <freertos/task.h>
 #include <lwip/sockets.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "Form.h"
 #include "core/Knob.h"
@@ -91,7 +92,8 @@ void WebLink::begin() {
 
   // The suffix tells two boards on the same bench apart in a WiFi list, and it is what the setup
   // network is called until the board's file names it.
-  String suffix((uint16_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
+  const uint64_t mac = ESP.getEfuseMac();
+  String suffix((uint16_t)(mac & 0xFFFF), HEX);
   suffix.toUpperCase();
   while (suffix.length() < 4)
     suffix = "0" + suffix;
@@ -109,6 +111,12 @@ void WebLink::begin() {
   }
   portalSsid_ = setupName_.isEmpty() ? String(WifiApPrefix) + "-" + suffix : setupName_;
   portalPass_ = setupPass_.isEmpty() ? String(WifiApPassword) : setupPass_;
+
+  // The board's identity, apart from the name it advertises: the 48-bit station MAC as twelve hex
+  // digits, so two boards on one network are told apart by the page as well as by their names.
+  char identity[13];
+  snprintf(identity, sizeof identity, "%012llX", (unsigned long long)(mac & 0xFFFFFFFFFFFFull));
+  deviceId_ = identity;
 
   // The credentials are this link's, not the core's: persistent(false) stops WiFi writing a second
   // copy into NVS that could then disagree with the page, and the retries below own the schedule.
@@ -451,7 +459,8 @@ const char* WebLink::typeOf(const String& path) {
 }
 
 esp_err_t WebLink::onStatus(httpd_req_t* request) {
-  const SystemStatus now = from(request)->control_.status();
+  const WebLink* self = from(request);
+  const SystemStatus now = self->control_.status();
 
   String body = "uptime_ms=";
   body += String(now.uptimeMs);
@@ -467,6 +476,8 @@ esp_err_t WebLink::onStatus(httpd_req_t* request) {
   body += String(now.dutyPercent, 1u);
   body += "&fault=";
   body += (now.fault[0] ? now.fault : "none");
+  body += "&device_id=";
+  body += self->deviceId_;
   return reply(request, "200 OK", FormType, body);
 }
 

@@ -39,7 +39,7 @@ and forget calls take no fields and ignore what the body carries.
 
 | call | reply |
 | --- | --- |
-| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
+| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>&device_id=<hex>` |
 | `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
 | `POST /api/vent` | `state=VENT` |
 | `POST /api/reset` | `state=IDLE` — clears a latched fault |
@@ -55,6 +55,7 @@ The status fields are one instant's copy of the machine:
 | `hold_time_ms` | milliseconds since the state entered `HOLD`; `0` while it is not holding, and a new hold starts its own count |
 | `duty` | the pump as commanded: `100.0` while it is driven, `0.0` while it is not |
 | `fault` | the latched code, or `none` |
+| `device_id` | the board's 48-bit station MAC as twelve upper-case hex digits; the same on every boot |
 
 `POST /api/set` is a target and a run in one command. The run gets the machine's own ceiling, two
 hours on the fitted build; nothing a client does extends it. Zero and `-` are the ambient target:
