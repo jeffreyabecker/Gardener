@@ -17,32 +17,32 @@ The radio serves on the address it joined, or on the setup access point's while 
 is. Every other `GET` is a path inside the page tree, `/` and `/dir/` serving that directory's
 `index.html`. A path that matches nothing is the portal's landing while the setup access point is
 up — a client on that access point is redirected to `/` — and a `404` otherwise. With no page image
-on the board, a missing path answers `404 ok=0&err=no_page`, and the boot log says the page did not
+on the board, a missing path answers `404 error=no_page`, and the boot log says the page did not
 mount.
 
 ## Format
 
 Both the request body and the reply are `application/x-www-form-urlencoded`: `key=value` pairs
-joined by `&`, with non-alphanumerics percent-encoded. There is no JSON anywhere. A reply carries
-`ok=1` or `ok=0`, and a refusal carries `err=<code>` and whatever fields explain it.
+joined by `&`, with non-alphanumerics percent-encoded. There is no JSON anywhere. The status code is
+the outcome, and the body holds only what the call answers with or the error that explains it.
 
-A call the machine took answers 200. A refused argument answers 400 with `err=out_of_range`,
-`err=missing_target` or `err=missing_ssid`; a set the machine will not take answers 409 with
-`err=not_ready` and a `reason` of `latch` or `no_reading`. The out-of-range reply names the `value`
-and the `min` or `max` beside the error.
+A call the machine took answers 200; a call with nothing to return answers 204. A refused argument
+answers 400 with `error=out_of_range`, `error=missing_target` or `error=missing_ssid`; a set the
+machine will not take answers 409 with `error=not_ready` and a `reason` of `latch` or `no_reading`.
+The out-of-range reply names the `value` and the `min` or `max` beside the error.
 
 A body longer than 256 bytes is ignored, which is the same as sending nothing: a set without a
-target is `missing_target` and a save without a name is `missing_ssid`. The vent, reset and forget
-calls take no fields and ignore what the body carries.
+target is `error=missing_target` and a save without a name is `error=missing_ssid`. The vent, reset
+and forget calls take no fields and ignore what the body carries.
 
 ## Machine calls
 
 | call | reply |
 | --- | --- |
-| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
-| `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
-| `POST /api/vent` | `ok=1&state=VENT` |
-| `POST /api/reset` | `ok=1&state=IDLE` — clears a latched fault |
+| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
+| `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
+| `POST /api/vent` | `state=VENT` |
+| `POST /api/reset` | `state=IDLE` — clears a latched fault |
 
 The status fields are one instant's copy of the machine:
 
@@ -63,12 +63,12 @@ reading. A target is refused, and queues nothing, in these ways:
 
 | reply | cause |
 | --- | --- |
-| `400 ok=0&err=out_of_range&field=target&value=<v>&min=0.0` | a target below ambient, including one written as `nan` |
-| `400 ok=0&err=out_of_range&field=target&value=<v>&max=60.0` | a target deeper than the fitted floor |
-| `409 ok=0&err=not_ready&reason=latch` | a fault is latched; `POST /api/reset` clears it |
-| `409 ok=0&err=not_ready&reason=no_reading` | the sensor is absent or its reading is not valid yet |
+| `400 error=out_of_range&field=target&value=<v>&min=0.0` | a target below ambient, including one written as `nan` |
+| `400 error=out_of_range&field=target&value=<v>&max=60.0` | a target deeper than the fitted floor |
+| `409 error=not_ready&reason=latch` | a fault is latched; `POST /api/reset` clears it |
+| `409 error=not_ready&reason=no_reading` | the sensor is absent or its reading is not valid yet |
 
-The floor itself is accepted (`target=60` with a valid reading is `ok=1&target=60.0&state=PULL`). A
+The floor itself is accepted (`target=60` with a valid reading is `target=60.0&state=PULL`). A
 token with no number in it reads as 0, so it releases too — send `0` or `-` deliberately, and check
 the reply if a script builds the token.
 
@@ -98,10 +98,10 @@ and releases the chamber, so the machine is left in `VENT` and settles to `IDLE`
 
 | call | reply |
 | --- | --- |
-| `GET /api/wifi` | `ok=1&ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
-| `GET /api/wifi/scan` | `ok=1&count=<n>&ssid0=<name>&rssi0=<dBm>&ssid1=<name>&rssi1=<dBm>…` |
-| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `ok=1` |
-| `POST /api/wifi/forget` | `ok=1` |
+| `GET /api/wifi` | `ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
+| `GET /api/wifi/scan` | `count=<n>&ssid0=<name>&rssi0=<dBm>&ssid1=<name>&rssi1=<dBm>…` |
+| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `204`, no body |
+| `POST /api/wifi/forget` | `204`, no body |
 
 The status fields are the stored choice and the radio as it stands:
 
@@ -115,15 +115,15 @@ The status fields are the stored choice and the radio as it stands:
 A scan lists at most 16 networks as `count` plus an indexed `ssid<i>` and `rssi<i>` pair for each,
 in the order found. A scan while the radio is still joining can answer `count=0`.
 
-`POST /api/wifi` stores the three fields and joins at once, and answers before the join has
+`POST /api/wifi` stores the three fields and joins at once, answering `204` before the join has
 succeeded; `GET /api/wifi` is where the address that follows is read. The name is required; the
 password may be empty for an open network, and a missing `keep_ap` is 0. Saving with `keep_ap=1`
 leaves the setup access point up beside the join, which is how a board that moved to another network
 can still be reached over its own access point. A join that has not succeeded after 15 seconds
 brings the setup access point up and retries every five seconds until it does.
 
-`POST /api/wifi/forget` clears the stored name, password and keep flag, and brings the setup access
-point back; a forgotten board is provisioned again from scratch.
+`POST /api/wifi/forget` clears the stored name, password and keep flag, answering `204`, and brings
+the setup access point back; a forgotten board is provisioned again from scratch.
 
 ```
 curl -s http://192.168.1.47/api/status
@@ -162,11 +162,11 @@ it; provisioning a new image clears it and brings the setup access point back.
 
 | symptom | cause | what to do |
 | --- | --- | --- |
-| `ok=0&err=no_page` | the board has no page image | write the data image, then reboot |
-| `err=missing_target` | the set request carried no `target` field, or a body over 256 bytes | send `target=<kPa>` as form data |
-| `err=missing_ssid` | the save request carried no `ssid` field | send a network name |
-| `err=out_of_range` | the target is below ambient or past the floor | send a value from 0 to the fitted floor |
-| `409 err=not_ready&reason=latch` | a fault is latched | `POST /api/reset`, then set again |
-| `409 err=not_ready&reason=no_reading` | the sensor is absent or has no filtered sample yet | check the sensor's wiring and reference port |
+| `404 error=no_page` | the board has no page image | write the data image, then reboot |
+| `400 error=missing_target` | the set request carried no `target` field, or a body over 256 bytes | send `target=<kPa>` as form data |
+| `400 error=missing_ssid` | the save request carried no `ssid` field | send a network name |
+| `400 error=out_of_range` | the target is below ambient or past the floor | send a value from 0 to the fitted floor |
+| `409 error=not_ready&reason=latch` | a fault is latched | `POST /api/reset`, then set again |
+| `409 error=not_ready&reason=no_reading` | the sensor is absent or has no filtered sample yet | check the sensor's wiring and reference port |
 | a scan answers `count=0` | the radio is busy joining, or nothing is in range | try again once the join settles |
 | the page will not load | the board is on another network, or mDNS is not resolved | use the address the log prints, or `GET /api/wifi` from a host that can reach it |

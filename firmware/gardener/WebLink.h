@@ -77,6 +77,8 @@ class WebLink {
   void route(const char* uri, http_method method, esp_err_t (*handler)(httpd_req_t*));
   static esp_err_t reply(httpd_req_t* request, const char* code, const char* type,
                          const String& body);
+  // A success with nothing to say: the status code is the whole answer.
+  static esp_err_t noContent(httpd_req_t* request);
   static String bodyOf(httpd_req_t* request);
   static bool onPortal(httpd_req_t* request);
 

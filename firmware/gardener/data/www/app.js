@@ -1,5 +1,5 @@
-// What both pages do the same way: name an element, post a form body, put a reply's result on the
-// page. The API answers in the form encoding the page already uses, so nothing here parses JSON.
+// What both pages do the same way: name an element, post a form body, put a reply on the page. The
+// status code is the outcome; the body is the fields that answer or the error that explains it.
 
 const $ = (id) => document.getElementById(id);
 
@@ -10,16 +10,16 @@ async function send(path, params) {
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body
   });
-  return new URLSearchParams(await response.text());
+  return {status: response.status, result: new URLSearchParams(await response.text())};
 }
 
-function show(result) {
-  if (result.get('ok') === '1') {
-    const state = result.get('state');
+function show(reply) {
+  if (reply.status < 400) {
+    const state = reply.result.get('state');
     $('message').textContent = state ? 'ok: ' + state.toLowerCase() : 'ok';
     return;
   }
-  const detail = result.get('reason') || result.get('value') || '';
-  $('message').textContent = 'error: ' + (result.get('err') || 'unknown') +
+  const detail = reply.result.get('reason') || reply.result.get('value') || '';
+  $('message').textContent = 'error: ' + (reply.result.get('error') || 'unknown') +
     (detail ? ' (' + detail + ')' : '');
 }

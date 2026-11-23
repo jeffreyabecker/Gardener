@@ -20,19 +20,20 @@ serves a page tree at `/` and the HTTP API under `/api`:
 
 | call | result |
 | --- | --- |
-| `GET /api/status` | `ok=1&uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
-| `POST /api/set` with `target=<kPa\|->` | `ok=1&target=<kPa>&state=PULL`, or `ok=1&target=0.0&state=VENT` |
-| `POST /api/vent` | `ok=1&state=VENT` |
-| `POST /api/reset` | `ok=1&state=IDLE` |
-| `GET /api/wifi` | `ok=1&ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
-| `GET /api/wifi/scan` | `ok=1&count=<n>&ssid0=<name>&rssi0=<dBm>…` |
-| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `ok=1` |
-| `POST /api/wifi/forget` | `ok=1` |
+| `GET /api/status` | `uptime_ms=<ms>&pressure_kpa=<x>&target=<y>&state=<word>&hold_time_ms=<ms>&duty=<z>&fault=<code\|none>` |
+| `POST /api/set` with `target=<kPa\|->` | `target=<kPa>&state=PULL`, or `target=0.0&state=VENT` |
+| `POST /api/vent` | `state=VENT` |
+| `POST /api/reset` | `state=IDLE` |
+| `GET /api/wifi` | `ssid=<name>&mode=<sta\|ap\|ap+sta>&ip=<address>&keep_ap=<0\|1>` |
+| `GET /api/wifi/scan` | `count=<n>&ssid0=<name>&rssi0=<dBm>…` |
+| `POST /api/wifi` with `ssid`, `pass`, `keep_ap` | `204`, no body |
+| `POST /api/wifi/forget` | `204`, no body |
 
-Requests and results are both `application/x-www-form-urlencoded`; there is no JSON anywhere. A
-refusal is `ok=0&err=<code>` with the machine's codes (`out_of_range`, `not_ready`) and a
-`reason`, `value`, `min` or `max` beside it. The HTTP status is 200 for a call the machine took,
-400 for a refused argument and 409 for `not_ready`.
+Requests and results are both `application/x-www-form-urlencoded`; there is no JSON anywhere. The
+status code is the outcome: 200 for a call the machine took, 204 for one with nothing to return,
+400 for a refused argument, 409 for a set the machine will not take and 404 for a missing page. A
+refusal carries `error=<code>` and a `reason`, `value`, `min` or `max` beside it; a success carries
+only the fields the call answers with.
 
 On first boot there is no stored network, so the board starts an access point and a captive portal;
 joining it opens the page. Scan, pick a network, enter its password and save. The board joins it,
@@ -68,7 +69,7 @@ machine's readings and its three buttons, and `/wifi.html` is the network — wh
 what it joined, and the choice it stores — and a nav bar at the top of each says which page is
 which and links to the other. `page.css` and `app.js` are shared; `machine.js` and `wifi.js` are
 each page's own. A `GET` that matches nothing is the portal's landing while the setup access point
-is up and a 404 otherwise, and a missing tree answers `404 ok=0&err=no_page`; the boot log says the
+is up and a 404 otherwise, and a missing tree answers `404 error=no_page`; the boot log says the
 page did not mount.
 
 The network the board stores lives in the same partition, at `/wifi.conf` outside `www`, as one

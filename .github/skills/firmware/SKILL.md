@@ -114,11 +114,11 @@ refusal byte. There is no shared reply builder, no shared `ok`/`err` envelope, n
 and no common response type across the links. A change to one link's format is not a change to the
 other.
 
-**Borrowing another link's grammar is the smell.** The web link's replies as they stand carry an
-`ok=1` beside an HTTP status, which says the outcome twice and makes every HTTP client learn an
-envelope it does not need. That is the pattern this rule names: a change to the web link is the
-moment to give the API its own error shape, and to let the status code be the outcome rather than a
-second copy of it.
+**Borrowing another link's grammar is the smell.** An outcome in the body beside the status code
+that already carries it — an `ok` flag, a shared message table — says the same thing twice and makes
+a client learn an envelope it does not need. A link answers in its own terms: on the web the status
+code is the outcome, and the body holds the fields the call answers with or the error that explains
+it.
 
 **A link does not grow a shared abstraction with a link it resembles.** Two reply writers that look
 alike today are cheaper than one common writer that has to be unpicked when a status code, a header
@@ -126,9 +126,9 @@ or a chunked body arrives and a shared envelope cannot express it. The duplicati
 independence, and it is expected: no reuse between links is planned here, so none is to be
 engineered.
 
-This is guidance for new code and for code you are already changing. A link that already borrows
-another's grammar is not a rewrite-on-sight target, but the next change to that link is the moment
-to give it its own.
+This is guidance for new code and for code you are already changing. A link that already mixes its
+outcome into the body is not a rewrite-on-sight target, but the next change to that link is the
+moment to give it its own answer.
 
 ## The Berry boundary
 

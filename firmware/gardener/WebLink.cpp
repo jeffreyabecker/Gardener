@@ -402,6 +402,11 @@ esp_err_t WebLink::reply(httpd_req_t* request, const char* code, const char* typ
   return httpd_resp_send(request, body.c_str(), body.length());
 }
 
+esp_err_t WebLink::noContent(httpd_req_t* request) {
+  httpd_resp_set_status(request, "204 No Content");
+  return httpd_resp_send(request, nullptr, 0);
+}
+
 esp_err_t WebLink::onStatic(httpd_req_t* request) {
   // A GET is a path inside the document root and nothing else: no climbing out of it, and no
   // reaching the config that sits beside it.
@@ -425,7 +430,7 @@ esp_err_t WebLink::onStatic(httpd_req_t* request) {
 esp_err_t WebLink::miss(httpd_req_t* request) {
   WebLink* self = from(request);
   if (!self->mounted_ || !LittleFS.exists(PagePath)) {
-    return reply(request, "404 Not Found", FormType, "ok=0&err=no_page");
+    return reply(request, "404 Not Found", FormType, "error=no_page");
   }
   if (self->portalUp_ && onPortal(request)) {
     httpd_resp_set_status(request, "302 Found");
@@ -448,7 +453,7 @@ const char* WebLink::typeOf(const String& path) {
 esp_err_t WebLink::onStatus(httpd_req_t* request) {
   const SystemStatus now = from(request)->control_.status();
 
-  String body = "ok=1&uptime_ms=";
+  String body = "uptime_ms=";
   body += String(now.uptimeMs);
   body += "&pressure_kpa=";
   body += String(now.pressureKpa, 2u);
@@ -469,7 +474,7 @@ esp_err_t WebLink::onSet(httpd_req_t* request) {
   WebLink* self = from(request);
   const String token = formField(bodyOf(request), "target");
   if (token.isEmpty()) {
-    return reply(request, "400 Bad Request", FormType, "ok=0&err=missing_target");
+    return reply(request, "400 Bad Request", FormType, "error=missing_target");
   }
 
   // `-` stays as the shorthand for the ambient target, which is what 0 means as well.
@@ -478,50 +483,50 @@ esp_err_t WebLink::onSet(httpd_req_t* request) {
 
   switch (self->control_.set(targetKpa)) {
     case ServeResult::Ok: {
-      String body = "ok=1&target=";
+      String body = "target=";
       body += String(targetKpa, 1u);
       body += "&state=PULL";
       return reply(request, "200 OK", FormType, body);
     }
     case ServeResult::Released:
-      return reply(request, "200 OK", FormType, "ok=1&target=0.0&state=VENT");
+      return reply(request, "200 OK", FormType, "target=0.0&state=VENT");
     case ServeResult::BelowRange: {
-      String body = "ok=0&err=out_of_range&field=target&value=";
+      String body = "error=out_of_range&field=target&value=";
       body += formEncoded(token);
       body += "&min=0.0";
       return reply(request, "400 Bad Request", FormType, body);
     }
     case ServeResult::AboveRange: {
-      String body = "ok=0&err=out_of_range&field=target&value=";
+      String body = "error=out_of_range&field=target&value=";
       body += formEncoded(token);
       body += "&max=";
       body += String(ControlFloorKpa, 1u);
       return reply(request, "400 Bad Request", FormType, body);
     }
     case ServeResult::NotReady: {
-      String body = "ok=0&err=not_ready&reason=";
+      String body = "error=not_ready&reason=";
       body += self->control_.refusal();
       return reply(request, "409 Conflict", FormType, body);
     }
   }
 
-  return reply(request, "400 Bad Request", FormType, "ok=0&err=unknown");
+  return reply(request, "400 Bad Request", FormType, "error=unknown");
 }
 
 esp_err_t WebLink::onVent(httpd_req_t* request) {
   from(request)->control_.vent();
-  return reply(request, "200 OK", FormType, "ok=1&state=VENT");
+  return reply(request, "200 OK", FormType, "state=VENT");
 }
 
 esp_err_t WebLink::onReset(httpd_req_t* request) {
   from(request)->control_.reset();
-  return reply(request, "200 OK", FormType, "ok=1&state=IDLE");
+  return reply(request, "200 OK", FormType, "state=IDLE");
 }
 
 esp_err_t WebLink::onWifi(httpd_req_t* request) {
   const WebLink* self = from(request);
 
-  String body = "ok=1&ssid=";
+  String body = "ssid=";
   body += formEncoded(self->ssid_);
   body += "&mode=";
   body += self->modeName();
@@ -536,7 +541,7 @@ esp_err_t WebLink::onScan(httpd_req_t* request) {
   WifiNetwork networks[MaxScannedNetworks];
   const int count = from(request)->scan(networks, MaxScannedNetworks);
 
-  String body = "ok=1&count=";
+  String body = "count=";
   body += String(count);
   for (int i = 0; i < count; i++) {
     body += "&ssid";
@@ -558,19 +563,19 @@ esp_err_t WebLink::onWifiSave(httpd_req_t* request) {
   const bool keepPortal = formField(body, "keep_ap") == "1";
 
   if (ssid.isEmpty()) {
-    return reply(request, "400 Bad Request", FormType, "ok=0&err=missing_ssid");
+    return reply(request, "400 Bad Request", FormType, "error=missing_ssid");
   }
 
   from(request)->setSsid(ssid);
   from(request)->setPass(pass);
   from(request)->setKeepPortal(keepPortal);
   from(request)->join();
-  return reply(request, "200 OK", FormType, "ok=1");
+  return noContent(request);
 }
 
 esp_err_t WebLink::onWifiForget(httpd_req_t* request) {
   from(request)->forget();
-  return reply(request, "200 OK", FormType, "ok=1");
+  return noContent(request);
 }
 
 bool WebLink::onPortal(httpd_req_t* request) {
